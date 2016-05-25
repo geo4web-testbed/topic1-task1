@@ -1,10 +1,12 @@
 Modern Ways of Spatial Data Publishing
---------------------------------------
+======================================
 
-The research question to answer is: “How do the other lessons learned within the GeoNovum tender meet the constraints (e.g. budgets) and capabilities (e.g. in-house know-how) of governmental organizations on the one hand, and of data users on the other?”
+The research question to answer is:
+
+> How do the other lessons learned within the GeoNovum tender meet the constraints (e.g. budgets) and capabilities (e.g. in-house know-how) of governmental organizations on the one hand, and of data users on the other?
 
 Steps involved in the high-quality publication of spatial data
-==============================================================
+--------------------------------------------------------------
 
   1. **Obtaining** public data (⋆⋆).
   2. **Data conversion (1/2)** from proprietary / binary to an open / text formats.  This allows the data to be freely read and processed in SotA tools (⋆⋆⋆).

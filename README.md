@@ -10,7 +10,7 @@ Steps involved in the high-quality publication of spatial data
   2. **Data conversion (1/2)** from proprietary / binary to an open / text formats.  This allows the data to be freely read and processed in SotA tools (⋆⋆⋆).
   3. **Data conversion (2/2)** from an open and processable format to Linked Data, using a straightforward mapping (i.e., fully automated).
   4. **Data tansformation** Perform a recorded sequence of Linked Data transformations in order to raise the quality of the data (⋆⋆⋆⋆).
-  5. Once the data has high enough quality it can be linked to external sources (⋆⋆⋆⋆⋆).
+  5. **Link to extenal sources** once the data has reached high enough quality (⋆⋆⋆⋆⋆).
   6. **Data publication** of high quality data, ensuring high performance and high availability.
   7. **Data exposure** through APIs and interaction paradigms the users like / want / already know.
   8. **Uptake** by users who recognize the value of the data, resulting in real-world use.

@@ -3,7 +3,7 @@
   [
     init_beeldbank/0,
     init_bgt/0,
-    init_cbs/0
+    init_cbs/0,
     init_gemeente/0,
     init_monumenten/0
   ]
@@ -79,11 +79,11 @@ This generates the following datasets:
 :- rdf_meta
    bgt_class(r).
 
-init_beeldbank :- q_conv(beeldbank, _{void: true}).
-init_bgt :- q_conv(bgt, _{vocab: true, void: true}).
-init_cbs :- q_conv(cbs, _{vocab: true, void: true}).
-init_gemeente :- q_conv(gemeente, _{void: true}).
-init_monumenten :- q_conv(monumenten, _{void: true}).
+init_beeldbank :- q_conv(beeldbank, _{module: datasets, void: true}).
+init_bgt :- q_conv(bgt, _{module: datasets, vocab: true, void: true}).
+init_cbs :- q_conv(cbs, _{module: datasets, vocab: true, void: true}).
+init_gemeente :- q_conv(gemeente, _{module: datasets, void: true}).
+init_monumenten :- q_conv(monumenten, _{module: datasets, void: true}).
 
 
 
@@ -147,7 +147,7 @@ bgt_scrape_data(_) :-
 % @bug In the original data ("geometry" key appears twice in JSON object.
 bgt_scrape_data('http://www.ldproxy.net/bgt/Pand', 6, _) :- !.
 bgt_scrape_data(C, N1, G) :-
-  debug(bgt(scrape), "~w: ~D", [C,N1]),
+  debug(conv(bgt), "~w: ~D", [C,N1]),
   rdf_global_id(bgt:Local, C),
   atomic_list_concat(['',bgt,Local], /, Path),
   uri_query_components(Query, [page=N1]),
@@ -155,7 +155,7 @@ bgt_scrape_data(C, N1, G) :-
   http_retry_until_success(
     geold_tuples(Iri, bgt, _{}, _{'@type': C}, Triples)
   ),
-  %%%%(debugging(bgt(scrape)) -> q_print_triples(Triples) ; true),
+  %%%%(debugging(conv(bgt)) -> q_print_triples(Triples) ; true),
   (   Triples = []
   ->  true
   ;   maplist({G}/[Triple]>>qb(rdf, Triple, G), Triples),

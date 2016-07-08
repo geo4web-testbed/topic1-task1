@@ -1,5 +1,5 @@
 :- module(
-  datasets,
+  geonovum_datasets,
   [
     init_beeldbank/0,
     init_bgt/0,
@@ -79,11 +79,11 @@ This generates the following datasets:
 :- rdf_meta
    bgt_class(r).
 
-init_beeldbank :- q_conv(beeldbank, _{module: datasets, void: true}).
-init_bgt :- q_conv(bgt, _{module: datasets, vocab: true, void: true}).
-init_cbs :- q_conv(cbs, _{module: datasets, vocab: true, void: true}).
-init_gemeente :- q_conv(gemeente, _{module: datasets, void: true}).
-init_monumenten :- q_conv(monumenten, _{module: datasets, void: true}).
+init_beeldbank :- q_conv(beeldbank, _{module: geonovum_datasets, void: true}).
+init_bgt :- q_conv(bgt, _{module: geonovum_datasets, vocab: true, void: true}).
+init_cbs :- q_conv(cbs, _{module: geonovum_datasets, vocab: true, void: true}).
+init_gemeente :- q_conv(gemeente, _{module: geonovum_datasets, void: true}).
+init_monumenten :- q_conv(monumenten, _{module: geonovum_datasets, void: true}).
 
 
 

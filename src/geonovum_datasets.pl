@@ -233,7 +233,7 @@ gemeente_load_data(G) :-
   qu_change_datatype(M1, M2, gemeente:validSince, G, xsd:gYear),
   qu_change_datatype(M1, M2, gemeente:validUntil, G, xsd:gYear),
   qu_lex_to_iri(M1, M2, rdf:type, gemeente, G, type_to_local0),
-  qu_lex_to_iri(M1, M2, gemeente:geometry_type, wkt, G, atom_lowercase),
+  qu_lex_to_iri(M1, M2, gemeente:geometry_type, wkt, G, lowercase),
   qu_replace_flat_wkt_geometry(M1, M2, gemeente:geometry_type, gemeente:geometry_coordinates, G),
   qu_add_ltag(M1, M2, gemeente:name, nl, G),
   q_save(G).

@@ -3,7 +3,7 @@
   [
     init_beeldbank/0,
     init_bgt/0,
-    init_cbs/0,
+    init_cbs2015/0,
     init_gemeente/0,
     init_monumenten/0
   ]
@@ -34,14 +34,11 @@ This generates the following datasets:
 :- use_module(library(atom_ext)).
 :- use_module(library(conv/csv2rdf)).
 :- use_module(library(conv/json2rdf)).
-:- use_module(library(conv/q_conv)).
 :- use_module(library(conv/xml2rdf)).
-:- use_module(library(dcg/dcg_atom)).
 :- use_module(library(dcg/dcg_ext)).
 :- use_module(library(debug)).
 :- use_module(library(dict_ext)).
 :- use_module(library(filesex)).
-:- use_module(library(hdt/hdt__io)).
 :- use_module(library(http/http_download)).
 :- use_module(library(http/http_io)).
 :- use_module(library(json_ext)).
@@ -52,7 +49,7 @@ This generates the following datasets:
 :- use_module(library(os/io)).
 :- use_module(library(os/thread_ext)).
 :- use_module(library(print_ext)).
-:- use_module(library(q/q__io)).
+:- use_module(library(q/q_fs)).
 :- use_module(library(q/q_print)).
 :- use_module(library(q/q_stmt)).
 :- use_module(library(q/q_term)).
@@ -76,14 +73,25 @@ This generates the following datasets:
 :- qb_alias(gemeente, 'http://gemeentechiedenis.nl/').
 :- qb_alias(monumenten, 'http://monumenten.nl/').
 
+:- multifile
+  q_fs:q_source2store_hook/4.
+
 :- rdf_meta
    bgt_class(r).
 
-init_beeldbank :- q_conv(beeldbank, _{module: geonovum_datasets, void: true}).
-init_bgt :- q_conv(bgt, _{module: geonovum_datasets, vocab: true, void: true}).
-init_cbs :- q_conv(cbs, _{module: geonovum_datasets, vocab: true, void: true}).
-init_gemeente :- q_conv(gemeente, _{module: geonovum_datasets, void: true}).
-init_monumenten :- q_conv(monumenten, _{module: geonovum_datasets, void: true}).
+:- debug(io).
+:- debug(qu(_)).
+
+init_beeldbank :-
+  q_source2store(beeldbank).
+init_bgt :-
+  q_source2store(bgt).
+init_cbs2015 :-
+  q_source2store(cbs2015).
+init_gemeente :-
+  q_source2store(gemeente).
+init_monumenten :-
+  q_source2store(monumenten).
 
 
 
@@ -91,17 +99,11 @@ init_monumenten :- q_conv(monumenten, _{module: geonovum_datasets, void: true}).
 
 % DATA %
 
-beeldbank_load_data(G) :-
-  hdt__call(
-    xml2rdf_stream(
-      source('RCE_alle_Objecten._grouped.xml.gz'),
-      [record],
-      _{ltag_attr: language}
-    ),
+q_fs:q_source2store_hook(beeldbank, File, Graph, G) :-
+  q_store_call(
+    xml2rdf_stream(File, [record], _{entry_name:Graph,ltag_attr:language}),
     G
   ),
-  enrich_beeldbank.
-enrich_beeldbank :-
   M1 = rdf,
   M2 = rdf,
   rdf_equal(beeldbank:data, G),
@@ -134,7 +136,7 @@ bgt_load_data(G) :-
   qu_change_datatype(M1, M2, bgt:objectEindTijd, G, xsd:date),
   qu_change_datatype(M1, M2, bgt:tijdstipRegistratie, G, xsd:dateTime),
   qu_rm(M1, M2, _, rdf:type, geold:'Feature', G),
-  q_save(G).
+  q_save(M2, G).
 
 
 bgt_scrape_data(G) :-
@@ -192,15 +194,8 @@ bgt_class(bgt:'Weginrichtingselement').
 
 
 
-cbs_load_data(G) :-
-  maplist(
-    {G}/[File]>>cbs_load_data(File, G),
-    ['Buurt_2015.csv.gz','gem_2015.csv.gz','Wijk_2015.csv.gz']
-  ).
-
-
-cbs_load_data(File, G) :-
-  hdt__call(csv2rdf_stream(source(File), [alias(cbs)]), G),
+q_fs:q_source2store_hook(cbs, File, Graph, G) :-
+  q_store_call(csv2rdf_stream(source(File), [entry_name(Graph)]), G),
   M1 = rdf,
   M2 = rdf,
   q_load(M1, G),
@@ -212,12 +207,12 @@ cbs_load_data(File, G) :-
   qu_rm_error(M1, M2, _, cbs:'WATER', "B"^^xsd:string, G),
   qu_change_lex(M1, M2, cbs:'WATER', G, cbs_boolean),
   qu_change_datatype(M1, M2, cbs:'WATER', G, xsd:boolean),
-  q_save(G).
+  q_save(M2, G).
 
 
 
 gemeente_load_data(G) :-
-  hdt__call(
+  q_store_call(
     json2rdf_stream(
       source('gemeentegeschiedenis.pits.ndjson.gz'),
       _{alias: gemeente}
@@ -236,26 +231,24 @@ gemeente_load_data(G) :-
   qu_lex_to_iri(M1, M2, gemeente:geometry_type, wkt, G, lowercase),
   qu_replace_flat_wkt_geometry(M1, M2, gemeente:geometry_type, gemeente:geometry_coordinates, G),
   qu_add_ltag(M1, M2, gemeente:name, nl, G),
-  q_save(G).
+  q_save(M2, G).
 
 
 
-monumenten_load_data(_) :-
+q_fs:q_source2store_hook(monumenten, File1, Graph, G) :-
+  q_store_file(monumenten, File2),
   rdf_change_format(
-    source('monumenten.ttl.gz'),
-    data('monumenten_data.nt.gz'),
-    [from_format(turtle),to_format(ntriples)]
+    File1,
+    File2,
+    [entry_name(Graph),from_format(turtle),to_format(ntriples)]
   ),
-  enrich_monumenten.
-enrich_monumenten :-
-  rdf_equal(monumenten:data, G),
   M1 = rdf,
   M2 = rdf,
   q_load(M1, G),
   qu_change_datatype(M1, M2, wgs84:lat, G, xsd:float),
   qu_change_datatype(M1, M2, wgs84:long, G, xsd:float),
   qu_replace_flat_wgs84_point(M1, M2, G),
-  q_save(G).
+  q_save(M2, G).
   %qu_lex_to_iri(M1, M2, dbo:municipality, monumenten, G, spaces_to_underscores),
 
 
@@ -351,7 +344,7 @@ bgt_load_vocab(G) :-
     qb_label(M, Iri, Lbl@nl, G),
     qb_comment(M, Iri, Comment@nl, G)
   )),
-  q_save(G).
+  q_save(M, G).
 
 
 
@@ -567,7 +560,7 @@ behorende eilanden Bonaire, Curaçao, Saba, Sint-Eustatius, Sint-Maarten en Arub
   qb_label(M, cbs:'WWB_UITTOT', "Algemene bijstandsuitkeringen totaal"@nl, G),
   qb_comment(M, cbs:'WWB_UITTOT', "Personen die een bijstandsuitkering op grond van de Wet werk en bijstand (WWB, tot 1 januari 2015) of de Participatiewet (vanaf 1 januari 2015) ontvangen.  Het gaat om algemeen periodieke uitkeringen aan thuiswonende personen tot de AOW-leeftijd.  Het betreft in 2015 voorlopige cijfers."@nl, G),
 
-  q_save(G).
+  q_save(M, G).
 
 
 

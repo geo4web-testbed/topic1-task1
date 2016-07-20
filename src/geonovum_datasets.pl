@@ -36,7 +36,6 @@ This generates the following datasets:
 :- use_module(library(conv/json2rdf)).
 :- use_module(library(conv/q_conv)).
 :- use_module(library(conv/xml2rdf)).
-:- use_module(library(dcg/dcg_atom)).
 :- use_module(library(dcg/dcg_ext)).
 :- use_module(library(debug)).
 :- use_module(library(dict_ext)).

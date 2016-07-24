@@ -4,7 +4,7 @@
     init_beeldbank/0,
     init_bgt/0,
     init_cbs2015/0,
-    init_gemeente/0,
+    init_gemeentegeschiedenis/0,
     init_monumenten/0
   ]
 ).
@@ -28,8 +28,6 @@ This generates the following datasets:
 @version 2016/05-2016/07
 */
 
-:- set_prolog_stack(global, limit(7*10**9)).
-
 :- use_module(library(apply)).
 :- use_module(library(atom_ext)).
 :- use_module(library(conv/csv2rdf)).
@@ -49,7 +47,7 @@ This generates the following datasets:
 :- use_module(library(os/io)).
 :- use_module(library(os/thread_ext)).
 :- use_module(library(print_ext)).
-:- use_module(library(q/q_fs)).
+:- use_module(library(q/q_io)).
 :- use_module(library(q/q_print)).
 :- use_module(library(q/q_stmt)).
 :- use_module(library(q/q_term)).
@@ -57,7 +55,7 @@ This generates the following datasets:
 :- use_module(library(q/q_wkt)).
 :- use_module(library(q/qb)).
 :- use_module(library(q/qu)).
-:- use_module(library(rdf/rdfio)).
+:- use_module(library(rdf/rdf_io)).
 :- use_module(library(rdfs/rdfs_ext)).
 :- use_module(library(semweb/rdf11)).
 :- use_module(library(thread)).
@@ -70,43 +68,36 @@ This generates the following datasets:
 :- qb_alias(beeldbank, 'http://beeldbank.nl/').
 :- qb_alias(bgt, 'http://bgt.nl/').
 :- qb_alias(cbs, 'http://cbs.nl/').
-:- qb_alias(gemeente, 'http://gemeentechiedenis.nl/').
+:- qb_alias(gemeentegeschiedenis, 'http://gemeentechiedenis.nl/').
 :- qb_alias(monumenten, 'http://monumenten.nl/').
 
 :- multifile
-  q_fs:q_source2store_hook/4.
+    q_io:q_scrape2store_hook/2,
+    q_io:q_source2store_hook/4.
 
 :- rdf_meta
    bgt_class(r).
 
+:- debug(conv(_)).
+:- debug(gen_ntuples).
 :- debug(io).
+:- debug(q(q_io)).
 :- debug(qu(_)).
+
+
+
+
+
+% BEELDBANK %
 
 init_beeldbank :-
   q_source2store(beeldbank).
-init_bgt :-
-  q_source2store(bgt).
-init_cbs2015 :-
-  q_source2store(cbs2015).
-init_gemeente :-
-  q_source2store(gemeente).
-init_monumenten :-
-  q_source2store(monumenten).
 
 
-
-
-
-% DATA %
-
-q_fs:q_source2store_hook(beeldbank, File, Graph, G) :-
-  q_store_call(
-    xml2rdf_stream(File, [record], _{entry_name:Graph,ltag_attr:language}),
-    G
-  ),
+q_io:q_source2store_hook(beeldbank, Graph, File, G) :-
+  q_store_call(xml2rdf_stream(File, [record], _{entry_name:Graph}), G),
   M1 = rdf,
   M2 = rdf,
-  rdf_equal(beeldbank:data, G),
   q_load(M1, G),
   qu_rm_col(M1, M2, ex:'acquisition.source.type_text', G),
   qu_rm_col(M1, M2, ex:'edit.date', G),
@@ -122,7 +113,15 @@ q_fs:q_source2store_hook(beeldbank, File, Graph, G) :-
 
 
 
-bgt_load_data(G) :-
+
+
+% BGT %
+
+init_bgt :-
+  q_scrape2store(bgt).
+
+
+q_io:q_scrape2store_hook(bgt, G) :-
   bgt_scrape_data(G),
   M1 = rdf,
   M2 = rdf,
@@ -194,8 +193,16 @@ bgt_class(bgt:'Weginrichtingselement').
 
 
 
-q_fs:q_source2store_hook(cbs, File, Graph, G) :-
-  q_store_call(csv2rdf_stream(source(File), [entry_name(Graph)]), G),
+
+
+% CBS 2015 %
+
+init_cbs2015 :-
+  q_source2store(cbs2015).
+
+
+q_io:q_source2store_hook(cbs2015, _, File, G) :-
+  q_store_call(csv2rdf_stream(File), G),
   M1 = rdf,
   M2 = rdf,
   q_load(M1, G),
@@ -211,37 +218,49 @@ q_fs:q_source2store_hook(cbs, File, Graph, G) :-
 
 
 
-gemeente_load_data(G) :-
-  q_store_call(
-    json2rdf_stream(
-      source('gemeentegeschiedenis.pits.ndjson.gz'),
-      _{alias: gemeente}
-    ),
-    G
-  ),
+
+
+% GEMEENTE %
+
+init_gemeentegeschiedenis :-
+  q_source2store(gemeentegeschiedenis).
+
+
+q_io:q_source2store_hook(gemeentegeschiedenis, _, File, G) :-
+  q_store_call(json2rdf_stream(File, _{alias: gemeentegeschiedenis}), G),
   M1 = rdf,
   M2 = rdf,
   q_load(M1, G),
-  qu_rm_col(M1, M2, gemeente:data_amsterdamse_code, G),
-  qu_replace_predicate(M1, M2, gemeente:type, G, rdf:type),
-  qu_rm_null(M1, M2, gemeente:validSince, "0"^^xsd:string, G),
-  qu_change_datatype(M1, M2, gemeente:validSince, G, xsd:gYear),
-  qu_change_datatype(M1, M2, gemeente:validUntil, G, xsd:gYear),
-  qu_lex_to_iri(M1, M2, rdf:type, gemeente, G, type_to_local0),
-  qu_lex_to_iri(M1, M2, gemeente:geometry_type, wkt, G, lowercase),
-  qu_replace_flat_wkt_geometry(M1, M2, gemeente:geometry_type, gemeente:geometry_coordinates, G),
-  qu_add_ltag(M1, M2, gemeente:name, nl, G),
+  qu_rm_col(M1, M2, gemeentegeschiedenis:data_amsterdamse_code, G),
+  qu_replace_predicate(M1, M2, gemeentegeschiedenis:type, G, rdf:type),
+  qu_rm_null(M1, M2, gemeentegeschiedenis:validSince, "0"^^xsd:string, G),
+  qu_change_datatype(M1, M2, gemeentegeschiedenis:validSince, G, xsd:gYear),
+  qu_change_datatype(M1, M2, gemeentegeschiedenis:validUntil, G, xsd:gYear),
+  qu_lex_to_iri(M1, M2, rdf:type, gemeentegeschiedenis, G, type_to_local0),
+  qu_lex_to_iri(M1, M2, gemeentegeschiedenis:geometry_type, wkt, G, lowercase),
+  qu_replace_flat_wkt_geometry(
+    M1,
+    M2,
+    gemeentegeschiedenis:geometry_type,
+    gemeentegeschiedenis:geometry_coordinates,
+    G
+  ),
+  qu_add_ltag(M1, M2, gemeentegeschiedenis:name, nl, G),
   q_save(M2, G).
 
 
 
-q_fs:q_source2store_hook(monumenten, File1, Graph, G) :-
-  q_store_file(monumenten, File2),
-  rdf_change_format(
-    File1,
-    File2,
-    [entry_name(Graph),from_format(turtle),to_format(ntriples)]
-  ),
+
+
+% MONUMENTEN %
+
+init_monumenten :-
+  q_source2store(monumenten).
+
+
+q_io:q_source2store_hook(monumenten, _, File1, G) :-
+  q_store_file(G, File2),
+  rdf_change_format(File1, File2, [from_format(turtle),to_format(ntriples)]),
   M1 = rdf,
   M2 = rdf,
   q_load(M1, G),

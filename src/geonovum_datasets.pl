@@ -67,20 +67,24 @@ This generates the following datasets:
 :- use_module(library(yall)).
 :- use_module(library(zlib)).
 
-:- qb_alias(triply, 'http://triply.cc/').
-
-:- multifile
-    q_io:q_scrape2store_hook/2,
-    q_io:q_source2store_hook/4.
-
-:- rdf_meta
-   bgt_class(r).
-
 :- debug(conv(_)).
 :- debug(gen_ntuples).
 :- debug(io).
 :- debug(q(q_io)).
 :- debug(qu(_)).
+
+:- discontiguous
+  q_io:q_scrape2store_hook/1,
+  q_io:q_source2store_hook/2.
+
+:- multifile
+    q_io:q_scrape2store_hook/1,
+    q_io:q_source2store_hook/2.
+
+:- rdf_meta
+   bgt_class(r).
+
+:- qb_alias(triply, 'http://triply.cc/').
 
 
 
@@ -89,11 +93,12 @@ This generates the following datasets:
 % BEELDBANK %
 
 init_beeldbank :-
-  q_source2store(beeldbank).
+  q_source2store(triply:beeldbank).
 
 
-q_io:q_source2store_hook(beeldbank, Graph, File, G) :-
-  q_store_call(xml2rdf_stream(File, [record], _{entry_name:Graph}), G),
+q_io:q_source2store_hook(File, G) :-
+  q_source_graph(triply:beeldbank, G), !,
+  q_store_call(xml2rdf_stream(File, [record]), G),
   M1 = rdf,
   M2 = rdf,
   q_load(M1, G),
@@ -116,10 +121,11 @@ q_io:q_source2store_hook(beeldbank, Graph, File, G) :-
 % BGT %
 
 init_bgt :-
-  q_scrape2store(bgt).
+  q_scrape2store(triply:bgt).
 
 
-q_io:q_scrape2store_hook(bgt, G) :-
+q_io:q_scrape2store_hook(G) :-
+  q_source_graph(triply:bgt, G), !,
   bgt_scrape_data(G),
   M1 = rdf,
   M2 = rdf,
@@ -196,10 +202,11 @@ bgt_class(triply:'Weginrichtingselement').
 % CBS 2015 %
 
 init_cbs2015 :-
-  q_source2store(cbs2015).
+  q_source2store(triply:cbs2015).
 
 
-q_io:q_source2store_hook(cbs2015, _, File, G) :-
+q_io:q_source2store_hook(File, G) :-
+  q_source_graph(triply:cbs2015, G), !,
   q_store_call(csv2rdf_stream(File), G),
   M1 = rdf,
   M2 = rdf,
@@ -224,7 +231,8 @@ init_gemeentegeschiedenis :-
   q_source2store(gemeentegeschiedenis).
 
 
-q_io:q_source2store_hook(gemeentegeschiedenis, _, File, G) :-
+q_io:q_source2store_hook(File, G) :-
+  q_source_graph(triply:gemeentegeschiedenis, G), !,
   q_store_call(json2rdf_stream(File), G),
   M1 = rdf,
   M2 = rdf,
@@ -250,7 +258,8 @@ init_monumenten :-
   q_source2store(monumenten).
 
 
-q_io:q_source2store_hook(monumenten, _, File1, G) :-
+q_io:q_source2store_hook(File1, G) :-
+  q_source_graph(triply:monumenten, G), !,
   q_store_file(G, File2),
   rdf_change_format(File1, File2, [from_format(turtle),to_format(ntriples)]),
   M1 = rdf,
@@ -271,7 +280,8 @@ init_strikes :-
   q_source2store(strikes).
 
 
-q_io:q_source2store(strikes, _, File, G) :-
+q_io:q_source2store(File, G) :-
+  q_source_graph(triply:strikes, G), !,
   rdf_equal(triply:'Strike', C),
   q_store_call(csv2rdf_stream(File, [class(C)]), G),
   M1 = rdf,

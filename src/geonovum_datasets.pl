@@ -74,12 +74,12 @@ This generates the following datasets:
 :- debug(qu(_)).
 
 :- discontiguous
-  q_io:q_scrape2store_hook/1,
-  q_io:q_source2store_hook/2.
+  q_io:q_scrape2store_graph_hook/1,
+  q_io:q_source2store_graph_hook/2.
 
 :- multifile
-    q_io:q_scrape2store_hook/1,
-    q_io:q_source2store_hook/2.
+    q_io:q_scrape2store_graph_hook/1,
+    q_io:q_source2store_graph_hook/2.
 
 :- rdf_meta
    bgt_class(r).
@@ -93,10 +93,10 @@ This generates the following datasets:
 % BEELDBANK %
 
 init_beeldbank :-
-  q_source2store(triply:beeldbank).
+  q_source2store_dataset(triply:beeldbank).
 
 
-q_io:q_source2store_hook(File, G) :-
+q_io:q_source2store_graph_hook(File, G) :-
   q_source_graph(triply:beeldbank, G), !,
   q_store_call(xml2rdf_stream(File, [record]), G),
   M1 = rdf,
@@ -121,11 +121,11 @@ q_io:q_source2store_hook(File, G) :-
 % BGT %
 
 init_bgt :-
-  q_scrape2store(triply:bgt).
+  q_scrape2store_graph(triply:bgt).
 
 
-q_io:q_scrape2store_hook(G) :-
-  q_source_graph(triply:bgt, G), !,
+q_io:q_scrape2store_graph_hook(G) :-
+  rdf_equal(triply:bgt, G), !,
   bgt_scrape_data(G),
   M1 = rdf,
   M2 = rdf,
@@ -139,7 +139,8 @@ q_io:q_scrape2store_hook(G) :-
   qu_change_datatype(M1, M2, triply:objectEindTijd, G, xsd:date),
   qu_change_datatype(M1, M2, triply:tijdstipRegistratie, G, xsd:dateTime),
   qu_rm(M1, M2, _, rdf:type, geold:'Feature', G),
-  q_save(M2, G).
+  q_save(M2, G),
+  q_unload(M2, G).
 
 
 bgt_scrape_data(G) :-
@@ -159,7 +160,7 @@ bgt_scrape_data(C, N1, G) :-
   uri_query_components(Query, [page=N1]),
   uri_components(Iri, uri_components(http,'www.ldproxy.net',Path,Query,_)),
   http_retry_until_success(
-    geold_tuples(Iri, bgt, _{}, _{'@type': C}, Triples)
+    geold_tuples(Iri, triply, _{}, _{'@type': C}, Triples)
   ),
   %%%%(debugging(conv(bgt)) -> q_print_triples(Triples) ; true),
   (   Triples = []
@@ -202,10 +203,10 @@ bgt_class(triply:'Weginrichtingselement').
 % CBS 2015 %
 
 init_cbs2015 :-
-  q_source2store(triply:cbs2015).
+  q_source2store_dataset(triply:cbs2015).
 
 
-q_io:q_source2store_hook(File, G) :-
+q_io:q_source2store_graph_hook(File, G) :-
   q_source_graph(triply:cbs2015, G), !,
   q_store_call(csv2rdf_stream(File), G),
   M1 = rdf,
@@ -219,7 +220,8 @@ q_io:q_source2store_hook(File, G) :-
   qu_rm_error(M1, M2, _, triply:'WATER', "B"^^xsd:string, G),
   qu_change_lex(M1, M2, triply:'WATER', G, cbs_boolean),
   qu_change_datatype(M1, M2, triply:'WATER', G, xsd:boolean),
-  q_save(M2, G).
+  q_save(M2, G),
+  q_unload(M2, G).
 
 
 
@@ -228,10 +230,10 @@ q_io:q_source2store_hook(File, G) :-
 % GEMEENTE %
 
 init_gemeentegeschiedenis :-
-  q_source2store(gemeentegeschiedenis).
+  q_source2store_dataset(triply:gemeentegeschiedenis).
 
 
-q_io:q_source2store_hook(File, G) :-
+q_io:q_source2store_graph_hook(File, G) :-
   q_source_graph(triply:gemeentegeschiedenis, G), !,
   q_store_call(json2rdf_stream(File), G),
   M1 = rdf,
@@ -242,11 +244,12 @@ q_io:q_source2store_hook(File, G) :-
   qu_rm_null(M1, M2, triply:validSince, "0"^^xsd:string, G),
   qu_change_datatype(M1, M2, triply:validSince, G, xsd:gYear),
   qu_change_datatype(M1, M2, triply:validUntil, G, xsd:gYear),
-  qu_lex_to_iri(M1, M2, rdf:type, gemeentegeschiedenis, G, type_to_local0),
+  qu_lex_to_iri(M1, M2, rdf:type, triply, G, type_to_local0),
   qu_lex_to_iri(M1, M2, triply:geometry_type, wkt, G, lowercase),
   qu_replace_flat_wkt_geometry(M1, M2, triply:geometry_type, triply:geometry_coordinates, G),
   qu_add_ltag(M1, M2, triply:name, nl, G),
-  q_save(M2, G).
+  q_save(M2, G),
+  q_unload(M2, G).
 
 
 
@@ -255,12 +258,12 @@ q_io:q_source2store_hook(File, G) :-
 % MONUMENTEN %
 
 init_monumenten :-
-  q_source2store(monumenten).
+  q_source2store_dataset(triply:monumenten).
 
 
-q_io:q_source2store_hook(File1, G) :-
+q_io:q_source2store_graph_hook(File1, G) :-
   q_source_graph(triply:monumenten, G), !,
-  q_store_file(G, File2),
+  q_store_graph_file_name(G, File2),
   rdf_change_format(File1, File2, [from_format(turtle),to_format(ntriples)]),
   M1 = rdf,
   M2 = rdf,
@@ -268,7 +271,8 @@ q_io:q_source2store_hook(File1, G) :-
   qu_change_datatype(M1, M2, wgs84:lat, G, xsd:float),
   qu_change_datatype(M1, M2, wgs84:long, G, xsd:float),
   qu_replace_flat_wgs84_point(M1, M2, G),
-  q_save(M2, G).
+  q_save(M2, G),
+  q_unload(M2, G).
   %qu_lex_to_iri(M1, M2, dbo:municipality, monumenten, G, spaces_to_underscores),
 
 
@@ -277,7 +281,7 @@ q_io:q_source2store_hook(File1, G) :-
 % STRIKES %
 
 init_strikes :-
-  q_source2store(strikes).
+  q_source2store_dataset(strikes).
 
 
 q_io:q_source2store(File, G) :-
@@ -305,7 +309,8 @@ q_io:q_source2store(File, G) :-
   qu_comb_year_month(M1, M2, triply:year, triply:month, triply:day, G, triply:date),
   qu_process_string(M1, M2, triply:totals, G, totals0),
   qu_process_string(M1, M2, triply:place, G, places0),
-  q_save(M2, G).
+  q_save(M2, G),
+  q_unload(M2, G).
 
 
 
@@ -449,7 +454,8 @@ bgt_load_vocab(G) :-
     qb_label(M, Iri, Lbl@nl, G),
     qb_comment(M, Iri, Comment@nl, G)
   )),
-  q_save(M, G).
+  q_save(M2, G),
+  q_unload(M2, G).
 
 
 
@@ -665,7 +671,8 @@ behorende eilanden Bonaire, Curaçao, Saba, Sint-Eustatius, Sint-Maarten en Arub
   qb_label(M, triply:'WWB_UITTOT', "Algemene bijstandsuitkeringen totaal"@nl, G),
   qb_comment(M, triply:'WWB_UITTOT', "Personen die een bijstandsuitkering op grond van de Wet werk en bijstand (WWB, tot 1 januari 2015) of de Participatiewet (vanaf 1 januari 2015) ontvangen.  Het gaat om algemeen periodieke uitkeringen aan thuiswonende personen tot de AOW-leeftijd.  Het betreft in 2015 voorlopige cijfers."@nl, G),
 
-  q_save(M, G).
+  q_save(M, G),
+  q_unload(M, G).
 
 
 

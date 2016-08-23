@@ -16,6 +16,8 @@
 \usepackage{listings}
 \usepackage{minted}
 
+\usepackage{verbatim}
+
 % Font corrections.
 \newcommand{\textt}[1]{{\small \texttt{#1}}}
 
@@ -27,51 +29,34 @@
 \author{Wouter Beek ({\small\url{wouter@triply.cc}})}
 \author{Laurens Rietveld ({\small\url{laurens@triply.cc}})}
 \affil{Triply ({\small\url{http://triply.cc}})}
-\date{}
+\date{v0.2}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-  Almost every interesting dataset has some spatial component.
-  Besides being prevalent, spatial relations -- particularly
-  geographical ones -- tie the online to the offline world.  As such,
-  they provide a grounding of data stored in databases to the physical
-  environment that is described in those databases.
+  \noindent Almost every interesting dataset has some spatial
+  component.  Besides being prevalent, spatial relations --
+  particularly geographical ones -- tie the online to the offline
+  world.  As such, they provide a grounding of data stored in
+  databases to the physical environment that is described in those
+  databases.
 
   Given the availability of Semantic Web services, Linked Datasets and
-  Open Source web libraries we should be able to build a demontration
+  Open Source web libraries we should be able to build a demonstration
   system that allows web programmers to build innovative applications
-  on top of integrated Linked (Geo)datasets.  Unfortunately, this is
-  not the case.
+  on top of integrated Linked (Geo)datasets.  Unfortunately, we found
+  out that this is not (yet) the case.
 \end{abstract}
 
 \section{Introduction}
 
-\begin{table}
-  \begin{tabular}{|l|l|}
-    \hline
-    \textbf{Alias} & \textbf{IRI prefix}\\
-    \hline
-    \hline
-    \textt{geo}    & \url{http://www.opengis.net/ont/geosparql#}\\
-    \hline
-    \textt{bif}    & \url{http://www.openlinksw.com/schemas/bif#}\\
-    \hline
-    \textt{rdf}    & \url{http://www.w3.org/1999/02/22-rdf-syntax-ns#}\\
-    \hline
-    \textt{rdfs}   & \url{http://www.w3.org/2000/01/rdf-schema#}\\
-    \hline
-  \end{tabular}
-  \caption{Aliases for commonly occurring IRI prefixes.}
-  \label{tab:alias}
-\end{table}
-  
 Earlier research by GeoNovum has resulted in a collection of lessons
 learned that describe in great detail the requirements of a modern
 spatial data publishing infrastructure.  The purpose of the present
-report is to answer the following research question:
+report is document our research findings based on this prior work in
+an attempt to answer the following research question:
 
 \begin{quote}
   How do the lessons learned meet the constraints (e.g. budgets) and
@@ -79,11 +64,43 @@ report is to answer the following research question:
   on the one hand, and of data users on the other?
 \end{quote}
 
+While every governmental organization will be different, e.g., will be
+required to follow different rules and regulations depending on the
+domain or context in which it operates, it is possible to quantify the
+investment needed in order to build a Linked Geodata platform that
+implements the lessons learned.
 
-\section{First strategy: use existing tools}
+
+\begin{comment}
+\section{Approach}
+
+Quantification is performed in a four-stage process:
+
+\begin{itemize}
+
+\item Information gathering
+
+\item Scaffolding step: Based on the information gathered, make and
+  assessment of current platforms, libraries and tools that implement
+  the requirements.  Try to get overview of what will be their
+  strengths and weaknesses in an early stage.
+
+\item Filling in the blanks: Not all requirements may be available
+  from off-the-shelf tools.  It may therefore be necessary to develop
+  the remaining requirements.  This can either be done as a community
+  effort or by the organization itself.  The cost/benefit calculations
+  for these two approaches are very different.
+
+\item Test \& iterate: Once an acceptable platform is assembled.
+
+\end{itemize}
+\end{comment}
+
+
+\section{First strategy: use a SotA triple store}
 
 When we started out building our geospatial Linked Data demonstrator
-we first did an industry-wide assessment of existing tools.  For this
+we performed an industry-wide assessment of existing tools.  For this
 we have consulted people from multiple domains.  We first determined
 the leading query paradigm for geospatial Linked Data: this is
 GeoSPARQL~\cite{Battle2011}.  We then determined the tool with the
@@ -93,13 +110,13 @@ loaded the data into an endpoint hosted at
 \url{http://sparql.geonovum.triply.cc/sparql}.
 
 However, even Virtuoso does not support all geometries.  Our data
-contains curves, resuting in the following error whenever a curve is
+contains curves, resulting in the following error whenever a curve is
 encountered by the query engine:
 
-\begin{lstlisting}
+\begin{minted}{text}
   Virtuoso 42000 Error GEO..: for after check of geo intersects, some
   shape types (e.g., polygon rings and curves) are not yet supported
-\end{lstlisting}
+\end{minted}
 
 Here is an example of a query that gives the above warning (``Pairs of
 intersecting geometries that belong to the same resource.''):
@@ -117,9 +134,9 @@ WHERE {
 A second issue is that some queries do not terminate at all, as
 indicated by the following message:
 
-\begin{lstlisting}
+\begin{minted}{text}
   Virtuoso S1T00 Error SR171: Transaction timed out
-\end{lstlisting}
+\end{minted}
 
 An example is an altered version of the above query (``Five pairs of
 dissimilar intersecting geometries that belong to the same
@@ -136,7 +153,7 @@ LIMIT 5
 \end{minted}
 
 Thirdly, not all combinations of supported functions and supported
-shapes are supperted.  For instance, the following implements the geo
+shapes are supported.  For instance, the following implements the geo
 query for our original use case:
 
 \begin{minted}{sparql}
@@ -148,27 +165,34 @@ WHERE {
 LIMIT 5
 \end{minted}
 
-The problem is that distance can only be calculated between points, as
+In this particular case, the problem is that distance can only be
+calculated between points but not between a point and a surface, as
 communicated by the following message:
 
-\begin{lstlisting}
+\begin{minted}{text}
 Virtuoso 22023 Error GEO..: Function st_distance() expects a geometry
 of type 1 as argument 0, not geometry of type 10242
-\end{lstlisting}
+\end{minted}
 
 The fourth and biggest problem is that queries that combine geo
-functions and graph relations take \emph{very} long to calculate.  We
-have set the limit for query execution to 60 seconds and some queries
-still do not succeed within that timeframe.
+functions and graph relations take \emph{very} long to compute.  For
+testing purposes we have set the limit for query execution to
+10,000~(!)~seconds and some queries still do not succeed within that
+time-frame:
 
-\begin{lstlisting}
-  Virtuoso 42000 Error The estimated execution time 12774 (sec) exceeds the limit of 10000 (sec).
-\end{lstlisting}
+\begin{minted}{text}
+  Virtuoso 42000 Error The estimated execution time 12774 (sec)
+  exceeds the limit of 10000 (sec).
+\end{minted}
 
-We have corroborated these results with developers on the Linked Data
-Platform team (Kadaster).  They are also deploying geospatial data for
-web users and they also discovered that existing triple stores are
-unable to support this.
+
+\section{Second strategy: use a SotA Information Retrieval solution}
+
+%Linked Data Platform (Kadaster)
+We have corroborated our findings about the deficiency of existing
+triple stores with other developers.  They are also deploying
+geospatial data for web users and they also discovered that existing
+triple stores are unable to support this out-of-the-box.
 
 
 \section{Users have different needs \& capacities (lesson 1)}
@@ -197,16 +221,17 @@ the JavaScript RDF libraries that are currently being developed for
 client-side processing do not support, and will maybe never support,
 RDF/XML.
 
-RDF JavaScript Libraries Group
-
-https://www.w3.org/community/rdfjs/
+\begin{comment}
+RDF JavaScript Libraries Group\footnote{See
+  \url{https://www.w3.org/community/rdfjs/}}
+\end{comment}
 
 
 \subsection{Header Dictionary Triples (HDT)}
 \label{sec:hdt}
 
 Another format that could be added is Header Dictionary Triples
-(HDT)~\cite{Fernandez2012} files.  These are currently used to power
+(HDT)~\cite{Fernandez2013} files.  These are currently used to power
 the Graph API.  They are also used to power Linked Data Fragments
 (LDF)~\cite{Verborgh2014} and the LOD~Laundromat~\cite{Beek2014}.
 This format could be interesting for users who want to gather very
@@ -222,16 +247,14 @@ result set of this will be hundreds of megabytes of textual data.  The
 users will not be able to process this data off-hand, but would need
 to load this in her own database.
 
-TODO
-
 
 \subsection{GeoJSON}
 \label{sec:geojson}
 
 The GeoJSON format is not yet fully standardized.\footnote{GeoJSON is
   a proposed RFC standard as of August 2016.}  The GeoJSON
-RFC~\cite{rfc7946} is not a standard in the traditional sense of the
-word: a definition of all and only GeoJSON constructs and their
+RFC~\cite{Butler2016} is not a standard in the traditional sense of
+the word: a definition of all and only GeoJSON constructs and their
 meaning.  For instance, the current RFC does not give a format grammar
 but only examples of GeoJSON in use.
 
@@ -262,7 +285,7 @@ sense JSON-LD is similar to RDF/XML which is already relatively
 complex when compared to the N3-family of serializations (N3, Turtle,
 TRiG, N-Quads and N-Triples).
 
-There are currently implementations for C\#, Go, Java, Javascript,
+There are currently implementations for C\#, Go, Java, JavaScript,
 PHP, Python, Ruby.  Most notably support for C and C++, languages in
 which very many low-level database systems are written, is currently
 missing.  Illustratively, one of the most widely used C++-based RDF
@@ -291,22 +314,22 @@ considerable, because they have their own vocabularies that need to be
 mapped to and from RDF.  The OGC and W3C are currently working on this
 integration in the Spatial Data on the Web Working Group\footnote{See
   \url{https://www.w3.org/2015/spatial/wiki/Main_Page}}.  It is
-probalby wise to wait until that WG has come up with a first
+probably wise to wait until that WG has come up with a first
 (proposed) standard.
 
 
-\subsection{Findability (lesson 1a)}
+\section{Findability (lesson 1a)}
 
 One of the most difficult things for web programmers, when confronted
 with the system, is to find out \emph{what is in the data}.  For
 existing web services this is usually not an issue: there is a limited
-numeber of entity types and relations that can be queries.  For
+number of entity types and relations that can be queries.  For
 instance, a product review site has users who write reviews for
 products.  Products may have companies producing them and users may
-themself have ratings.  That's about it.
+themselves have ratings.  That's about it.
 
 Linked Data is very different: the monument dataset that we started
-out with contains over a hundred unique relationships between entites
+out with contains over a hundred unique relationships between entities
 belonging to dozens of different types.  And this is only one dataset.
 It is inherently impossible to provide a overview of what is in a
 large collection of Linked Data, in the same way in which it is
@@ -315,6 +338,7 @@ the web.  What we can do is come up with smart data visualization
 techniques.  We found out that no such techniques are currently
 available.
 
+\begin{comment}
 Datasets can be very large, so good search functions are required to
 let users find the needle in the haystack.
 
@@ -332,23 +356,33 @@ search and find data.
 Provide good search functions, for example let users search for whole
 datasets or single objects based on space, time and theme (keyword or
 category).
+\end{comment}
+
 
 
 \section{Keep it simple (lesson 1B)}
 
-A platform that enables to easily upload and publish spatial data
-sets.
+Simplicity is notoriously difficult to achieve in Linked Data.
+Simplicity is usually implemented by optimizing for a particular use
+case, but Linked Data promotes \emph{arbitrary reuse}.  However, this
+does not mean that exisitng approaches of Linked Geodata publishing
+cannot be simplified.  We do observe that simplifications in Linked
+Geodata publishing are costly to implement because they must often be
+implemented at multiple layers.
 
-For example, do not ask users to fill in a coordinate reference system
-(CRS) when they upload a spatial data set. Generally, the CRS can be
-detected from the CRS embedded in the file.
 
 \subsection{Uniform representation of geodata}
 
+A concrete example of the high cost of simplifying Linked Geodata
+publishing arises when we want to make it easy to query all geodata in
+a uniforma anf simple way.  Starting out with our source datasets this
+is not possible because geodata can be represented in different ways
+in RDF.  The following pattern is commonly used:
+
 \begin{minted}{turtle}
-  entitiy:x geosparql:defaultGeometry _:a .
-  _:a       geosparql:asWKT "POINT(5.46 51.35)"  ;
-            rdf:type geosparql:Geometry     .
+  entitiy:x geosparql:defaultGeometry _:a                    .
+  _:a       geosparql:asWKT           "POINT(5.46 51.35)"    ;
+            rdf:type                  geosparql:Geometry     .
 \end{minted}
 
 We believe that the above three statements can be rewritten to a
@@ -358,7 +392,7 @@ single statement conveying the same meaning:
   entity:x def:geometry "POINT(5.46 51.35)"^^def:point .
 \end{minted}
 
-Our version has the following benefits:
+This version has the following benefits:
 
 \begin{itemize}
 
@@ -369,11 +403,11 @@ Our version has the following benefits:
 
 \end{itemize}
 
-These properties result in direct usability imporvements:
+These properties result in direct usability improvements:
 
 \begin{itemize}
   
-\item One less level of nestingsimplifies querying.  For instance, we
+\item One less level of nesting simplifies querying.  For instance, we
   need one LDF request to retrieve the geometry of an entity instead
   of two.
 
@@ -385,30 +419,35 @@ These properties result in direct usability imporvements:
 \end{itemize}
 
 \begin{minted}{sparql}
-  ?e <def/geometry> ?g FILTER (datatype(?g) = <def/polygon>)
-  \label{lst:datatype}
+  ?x def:geometry ?y FILTER (datatype(?y) = def:polygon)
+  %\label{lst:datatype}
 \end{minted}
 
 
+\begin{comment}
 \subsection{Who is allowed to do what (lesson 1c)}
 
 All our data was published as Linked Open Data with no authentication.
 In general we notice that Linked Data is far more often \emph{read}
 than \emph{written}.  Our demonstration system does allow SPARQL
 Update requests to be sent, but we have not advertised or used this
-functionalty within the current research.
+functionality within the current research.
 
 
 \subsection{Each speaks its own language and lives in his own world}
+\end{comment}
 
 
-\section{Linking (lesson 2b)}
-
-\subsection{Internal links: within datasets}
+\section{Data transformation}
+\label{sec:conversion}
+\label{sec:enrichment}
+\label{sec:transformation}
 
 Geodata, as it is currently published, does not contain explicit
 links.  Links can be inferred from implicit cues by human domain
-experts, but not by automated and domain-independent means.
+experts, but not by automated and domain-independent means.  This
+means that implementing lesson 2b (Foster to link everything with
+everything) requires a relatively large investment.
 
 The same value sometimes denotes the same thing.  E.g., `Appingedam'
 denotes a municipality.  However, Appingedam is sometimes denoted by
@@ -417,11 +456,12 @@ different things (e.g., the area of Appingedam changes over time, the
 municipality of Appingedam is more than just the area of Appingedam,
 and a tourist uses `Appingedam' to denote the center of Appingedam).
 
-The same is true for other value types, e.g., `1903' may denote a year
-in the Gregorian calendar or the length of a road in meters.  
+%The same is true for other value types, e.g., `1903' may denote a year
+%in the Gregorian calendar or the length of a road in meters.  
 
 
 \subsection{Value unpacking}
+\label{sec:grammar}
 
 A single value in the source dataset may describe multiple entities
 and relations between them.  For instance the small `buurtcode' string
@@ -443,7 +483,7 @@ machines cannot `see' the meaning that is inside the package.  In
 order to make the meaning widely available we must `unpack' it using a
 grammar.  For the above code we have to construct the following
 grammar.\footnote{The grammar is written in Augmented Backus-Naur Form
-  (ABNF), \cite{abnf}.}
+  (ABNF)~\cite{Crocker2008}.}
 
 \begin{minted}{abnf}
 buurt         := "BU" gemeente-code wijk-code buurt-code
@@ -479,9 +519,9 @@ strings is known to be very high (Figure~\ref{fig:natlang}
 \begin{figure}
   \includegraphics[width=\linewidth]{img/natlang.png}
   \caption{Accuracy of natural language detection in RDF strings for
-    the 10 most frequent languages.  Strings of similar lenght are
+    the 10 most frequent languages.  Strings of similar length are
     combined in buckets.  The size of buckets increases
-    logarithmically.  Figure taken from~\cite{Beek2016}.}
+    logarithmically.  Figure taken from~\cite{Beek2016c}.}
   \label{fig:natlang}
 \end{figure}
 
@@ -494,15 +534,15 @@ data collection is to distinguish between Dutch and English strings.
 For example events are often described with a day, month and/or year
 column, tag or key:
 
-\begin{lstlisting}
+\begin{minted}{text}
   <EVENT-ID> | 1997 | Aug | 7
-\end{lstlisting}
+\end{minted}
 
 In order for dates to be comparable with one another they have to be
-converted to values of XML Schema Part 2: Datatypes 1.1~\cite{xsd11}.
-Month names can be converted using a simple, one-to-one grammar
-(Section~\ref{sec:grammar}).  After that values can be converted
-manually to datatypes.
+converted to values of XML~Schema Part~2:
+Datatypes~1.1~\cite{Peterson2012}.  Month names can be converted using
+a simple, one-to-one grammar (Section~\ref{sec:grammar}).  After that
+values can be converted manually to datatypes.
 
 \begin{minted}{turtle}
   event:x def:day   "07"^^xsd:gDay    ;
@@ -521,11 +561,12 @@ Because support for XML Schema Datatypes is very good overall, dates,
 times, durations, lengths, weights, etc. can now be compared through
 built-in functions.  For instance the function
 \textt{op:dateTime-less-than} is used by SPARQL 1.1 implementations to
-directly compare an event to all events that happended before
-it~\cite{xquery10}.
+directly compare an event to all events that happened before
+it~\cite{Malhotra2015}.
 
 
-\subsection{Persistent IRIs (lesson 2c)}
+
+\section{Persistent IRIs (lesson 2c)}
 
 It is very difficult to ensure persistent IRIs.
 
@@ -537,17 +578,23 @@ We have found the Dutch Linked Data URI strategy to be very beneficial
 during this process.  It distinguishes between IRIs for instance
 (ABOX) and schema (TBOX) entities.
 
-Publish data in registries at unique persistent URIs to ensure links between data sets are available, attainable and sustainable in the future.
+\begin{comment}
+Publish data in registries at unique persistent URIs to ensure links
+between data sets are available, attainable and sustainable in the
+future.
 
-Why
+Using URIs, you can link to something in a unique way and therefore
+uniquely distinguished. You need to use stable HTTP URIs for spatial
+objects and datasets in order to keep the links future-proof and
+reliable.  Intended outcome
 
-Using URIs, you can link to something in a unique way and therefore uniquely distinguished. You need to use stable HTTP URIs for spatial objects and datasets in order to keep the links future-proof and reliable.
-Intended outcome
+Registries, and especially the base registries, have proper uri
+management. Records are made available on a unique persistent uri,
+which enables the linking of objects within these registries to each
+other.  Possible approach
 
-Registries, and especially the base registries, have proper uri management. Records are made available on a unique persistent uri, which enables the linking of objects within these registries to each other.
-Possible approach
-
-Publishing data records on unique persistent URIs requires a URI strategy. For example using the Dutch Linked Data URI Strategy:
+Publishing data records on unique persistent URIs requires a URI
+strategy. For example using the Dutch Linked Data URI Strategy:
 
 URI:
 
@@ -559,10 +606,12 @@ Example: https://geo4web.apiwise.nl/gemeente/GM0307
 URI CBS Amersfoort
 How to test
 
-Several flavors exist but we recommend to the use Dutch URI Strategy as it was indexed by Google relatively fast. Read more here 
+Several flavors exist but we recommend to the use Dutch URI Strategy
+as it was indexed by Google relatively fast. Read more here
+\end{comment}
 
 
-
+\begin{comment}
 \section{Motivation for applying for this research topic}
 
 Triply applies for this research topic because it sees innovation
@@ -571,7 +620,7 @@ Data.  Triply wants to explore and concretely deliver significant
 improvements to the way in which geodata is disseminated to data
 consumers.  Triply believes that it is possible to unlock innovation
 potential within this tender given (1) the close collaboration with
-Geonovum, (2) the presense of other data suppliers such as PDOK and
+Geonovum, (2) the presence of other data suppliers such as PDOK and
 cultural heritage organizations, and (3) the lessons learned during
 the previous tender round on which we can build.
 
@@ -589,10 +638,10 @@ the Linked Data approach is applied correctly.  Since Linked Data does
 not require a single database schema to operate, we have the ability
 to disseminate the same data through different but complementary
 vocabularies.  For instance, there can be two schemas: one complex and
-difficult and antoher simplistic and easy (lesson 1B).  In this
+difficult and another simplistic and easy (lesson 1B).  In this
 example the two vocabularies cater towards the aforementioned two user
 groups.  In this way the same data can be delivered in different ways,
-benefitting different groups (lesson 1).  While the specification of
+benefiting different groups (lesson 1).  While the specification of
 multiple vocabularies/schemas on top of the same data collection comes
 at a low cost it does provide the necessary tuning to user
 capabilities (lesson 1D).
@@ -623,13 +672,13 @@ that 80\% of current SPARQL endpoints have low availability.  When we
 look at the 20\% SPARQL endpoints with high availability, we see that
 they enforce restrictions on the kinds of questions that can be asked
 and the size of answer sets that are returned.  This effectively means
-that remote triple stores are either unailable or severely
+that remote triple stores are either unavailable or severely
 constrained.  No Web programmer wants to program against a database
 with either of these properties.  Triply is the first Linked Data
 solution that allows the number of (consecutive) users to scale
 without blowing up the variable cost of endpoint operation.  Triply is
-able to do this because Triply is based on recent innocations in
-large-scale and scalable Linked Data deloyments: Linked Data Fragments
+able to do this because Triply is based on recent innovations in
+large-scale and scalable Linked Data deployments: Linked Data Fragments
 (LDF)~[\cite{Verborgh2014}], Header Dictionary Triples
 (HDT)~[\cite{Fernandez2013}] and LOD Laundromat~[\cite{Beek2014}].
 
@@ -799,6 +848,7 @@ approach.
 
 Triply agrees to publish all research results and deliverables that
 flow from this tender under the CC/by license.
+\end{comment}
 
 
 \section{Quantifying the effort}
@@ -824,6 +874,7 @@ programmers we worked with that could not be easily implemented by
 integrating some existing library.
 
 
+\begin{comment}
 \section{Conclusion}
 
 We conclude that it is not yet possible to go from a loose collection
@@ -833,12 +884,60 @@ data conversion and transformation is simply too high.
 
 However, we do believe that the lessons learned in previous research
 and validated in our research do point to a.
+\end{comment}
 
 
+\subsection{Shortcuts}
 
+We believe that it is possible to speed up and reduce the cost of the
+process of developing a geospatial Linked Data web service by taking
+`shortcuts'.
+
+
+\paragraph{Points only}
+
+Many of the deficiencies of SotA triple stores can be worked around by
+reducing all geometries to 2D points.  GeoSPARQL functions between
+points are mostly supported.  The downside to this is that much of the
+geospatial information is lost and very many geospatial query
+(contains, intersects) cannot be performed at all.  This also do not
+solve the problem that some queries never terminate or that many
+queries take too long.
+
+
+\paragraph{Start with Linked Data}
+
+In this research project we had to split development costs between
+implementing a web service and converting/transforming data.  By
+starting out with Linked Data a big chunk of the costs can be saved
+(approx. 40\% in our case).
 
 
 \bibliographystyle{plain}
 \bibliography{main}
 
+\appendix
+
+\section{Used aliases}
+
+\begin{table}
+  \centering
+  \begin{tabular}{|l|l|}
+    \hline
+    \textbf{Alias} & \textbf{IRI prefix}\\
+    \hline
+    \hline
+    \textt{geo}    & \url{http://www.opengis.net/ont/geosparql#}\\
+    \hline
+    \textt{bif}    & \url{http://www.openlinksw.com/schemas/bif#}\\
+    \hline
+    \textt{rdf}    & \url{http://www.w3.org/1999/02/22-rdf-syntax-ns#}\\
+    \hline
+    \textt{rdfs}   & \url{http://www.w3.org/2000/01/rdf-schema#}\\
+    \hline
+  \end{tabular}
+  \caption{Aliases for commonly occurring IRI prefixes.}
+  \label{tab:alias}
+\end{table}
+  
 \end{document}

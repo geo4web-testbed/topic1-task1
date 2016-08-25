@@ -9,11 +9,14 @@
 
 \usepackage{enumitem}
 
+\usepackage[T1]{fontenc}
+
 \usepackage{graphicx}
 
 \usepackage{hyperref}
 
-\usepackage{listings}
+\usepackage[utf8]{inputenc}
+
 \usepackage{minted}
 
 \usepackage{verbatim}
@@ -50,17 +53,18 @@
   out that this is not (yet) the case.
 \end{abstract}
 
+
 \section{Introduction}
 
 Earlier research by GeoNovum has resulted in a collection of lessons
 learned that describe in great detail the requirements of a modern
 spatial data publishing infrastructure.  The purpose of the present
-report is document our research findings based on this prior work in
-an attempt to answer the following research question:
+report is to document our research findings based on this prior work
+in an attempt to answer the following research question:
 
 \begin{quote}
-  How do the lessons learned meet the constraints (e.g. budgets) and
-  capabilities (e.g. in-house know-how) of governmental organizations
+  How do the lessons learned meet the constraints (e.g., budgets) and
+  capabilities (e.g., in-house know-how) of governmental organizations
   on the one hand, and of data users on the other?
 \end{quote}
 
@@ -78,20 +82,36 @@ Quantification is performed in a four-stage process:
 
 \begin{itemize}
 
-\item Information gathering
+\item Information gathering: Based on Linked Data and Geodata experts
+  and available we perfom a quick information gathering round in which
+  we form an overview of the directions we can take in order to answer
+  our research question.  The information gathered is not inteded to
+  be complete but is intended to give a global direction for
+  subsequent stages.  A more extensive information gathering approach
+  may be undertaken in the future.
 
-\item Scaffolding step: Based on the information gathered, make and
-  assessment of current platforms, libraries and tools that implement
-  the requirements.  Try to get overview of what will be their
-  strengths and weaknesses in an early stage.
+\item Scaffolding step: Based on the information gathered, we make an
+  assessment of current platforms, libraries and tools that would
+  allow the requirements to be implemented.  Also, some of the
+  stengths and weaknesses that did not surface during the information
+  gathering stage may come up here.
 
 \item Filling in the blanks: Not all requirements may be available
   from off-the-shelf tools.  It may therefore be necessary to develop
   the remaining requirements.  This can either be done as a community
   effort or by the organization itself.  The cost/benefit calculations
-  for these two approaches are very different.
+  for these two approaches are very different: while the costs of a
+  community effort can be spread and are therefore generally lower,
+  development may take a while.  On the other hand, in-house
+  development is relatively expensive but is likely to result in a
+  quick first working solution.  In practice, the challenge is to turn
+  components that are developed in-houde for speed into long-running
+  community projects afterwards.
 
-\item Test \& iterate: Once an acceptable platform is assembled.
+\item Test \& iterate: Once an acceptable platform is assembled we
+  need to go through several iterations of testing, upgrading and
+  testing.  We were not able to reach this fourth step in this
+  research.  Section~\ref{sec:conclusion} gives details as to why.
 
 \end{itemize}
 \end{comment}
@@ -176,31 +196,42 @@ of type 1 as argument 0, not geometry of type 10242
 
 The fourth and biggest problem is that queries that combine geo
 functions and graph relations take \emph{very} long to compute.  For
-testing purposes we have set the limit for query execution to
-10,000~(!)~seconds and some queries still do not succeed within that
-time-frame:
+testing purposes we have set the limit for query execution to 10,000
+seconds, but some queries still do not succeed within that time-frame:
 
 \begin{minted}{text}
   Virtuoso 42000 Error The estimated execution time 12774 (sec)
   exceeds the limit of 10000 (sec).
 \end{minted}
 
+We must note that both Virtuoso and StarDog are very good triple
+stores overall and that they are working on improving geodata and
+GeoSPARQL support.  It is difficult to assess when those improvements
+will be good enough for the purpose of setting up a Linked Geodata
+service.  It may also be the case that the out-of-the-box experience
+that we have tested can be improved through configuration changes that
+we are unaware of.
+
 
 \section{Second strategy: use a SotA Information Retrieval solution}
 
 %Linked Data Platform (Kadaster)
 We have corroborated our findings about the deficiency of existing
-triple stores with other developers.  They are also deploying
-geospatial data for web users and they also discovered that existing
-triple stores are unable to support this out-of-the-box.
+triple stores with other developers.  A common approach is to perform
+graph queries in a triple store and geospatial queries in a document
+store such a Solr.  This approach results in a good performance and
+coverage of graph/SPARQL queries as well as good performance and
+coverage of geospatial queries.  However, because the results come
+form different backends, it is generally not possible to perform a
+GeoSPARQL query in which graph and geospatial components are
+intertwined.
 
 
 \section{Users have different needs \& capacities (lesson 1)}
 
-In this research project we have tried to address multiple groups of
-users by offering result set formats that they are most likely to be
-familiar with.  Our demonstrator exposes the following result set
-formats:
+One of the ways in whic multiple groups of users can be addressed is
+by offering result set formats that they are familiar with.  Our
+demonstrator exposes the following result set formats:
 
 \begin{itemize}
 
@@ -212,51 +243,47 @@ formats:
 
 \end{itemize}
 
-The N-Quads and N-Triples formats are, implementation-wise, the
-simplest RDF serialization formats available.  They are supported by
-almost every RDF processor.  Additional RDF serialization formats like
-Turtle 1.1, RDF/XML 1.1 and TRiG 1.1 are also available in ClioPatria.
-It would be a low-cost effort to expose them as well.  We notice that
-the JavaScript RDF libraries that are currently being developed for
-client-side processing do not support, and will maybe never support,
-RDF/XML.
-
-\begin{comment}
-RDF JavaScript Libraries Group\footnote{See
-  \url{https://www.w3.org/community/rdfjs/}}
-\end{comment}
+N-Quads and N-Triples are, implementation-wise, the simplest RDF
+serialization formats available.  They are supported by almost every
+RDF processor.  Additional RDF serialization formats like Turtle 1.1,
+RDF/XML 1.1 and TRiG 1.1 are also widely available and are easy to
+add.  We notice that the JavaScript RDF libraries\footnote{For more
+  information, see the RDF JavaScript Libraries Group
+  (\url{https://www.w3.org/community/rdfjs/}).} that are currently
+developed for client-side processing do not support, and will maybe
+never support, RDF/XML.
 
 
 \subsection{Header Dictionary Triples (HDT)}
 \label{sec:hdt}
 
 Another format that could be added is Header Dictionary Triples
-(HDT)~\cite{Fernandez2013} files.  These are currently used to power
-the Graph API.  They are also used to power Linked Data Fragments
-(LDF)~\cite{Verborgh2014} and the LOD~Laundromat~\cite{Beek2014}.
-This format could be interesting for users who want to gather very
-large result sets.
+(HDT)~\cite{Fernandez2013}.  These are currently used to power the
+Graph API to allow Basic Graph Pattern queries to be performed
+(similar to Linked Data Fragments (LDF)~\cite{Verborgh2014}).  This
+format could be interesting for users who want to gather very large
+result sets.
 
 Textual serialization formats work well for small results sets.  For
 instance, if someone asks the ten nearest monuments then this can
-easily be returned in a text description.  However, if someone has a
-larger-scale use case one may want to retrieve thousands of results.
-For instance someone may request all monuments in The Netherlands in
-order to generate a `heat map' of areas with the most monuments.  The
-result set of this will be hundreds of megabytes of textual data.  The
-users will not be able to process this data off-hand, but would need
-to load this in her own database.
+easily be returned in a text-based reply.  However, some users have a
+large-scale use case, such as requesting \emph{all} monuments in the
+Nederlands (e..g, with the purpose of data visualization) A textual
+result set of this size is difficult to process.  With HDT the data is
+not only much smaller in size (as with regular compression) but can
+also be easily processed by the user.
 
 
 \subsection{GeoJSON}
 \label{sec:geojson}
 
-The GeoJSON format is not yet fully standardized.\footnote{GeoJSON is
-  a proposed RFC standard as of August 2016.}  The GeoJSON
-RFC~\cite{Butler2016} is not a standard in the traditional sense of
-the word: a definition of all and only GeoJSON constructs and their
-meaning.  For instance, the current RFC does not give a format grammar
-but only examples of GeoJSON in use.
+Another format we expose is GeoJSON.  The GeoJSON format is not yet
+fully standardized\footnote{GeoJSON is a proposed RFC standard as of
+  August 2016.} and the current RFC~\cite{Butler2016} is not a
+standard in the traditional sense of the word, i.e., a definition of
+all and only GeoJSON constructs and their meaning.  For instance, the
+current RFC does not give a formal grammar but relies on examples to
+convey GeoJSON syntax and semantics.
 
 It is not very difficult to implement GeoJSON, which is a very
 flexible format that can easily be combine with other JSON formats.
@@ -276,25 +303,30 @@ This point will be addressed in JSON-LD 1.1\footnote{See \url{https://github.com
 \subsection{JSON-LD}
 \label{sec:jsonld}
 
-JSON-LD 1.0 support was the most problematic to implement.  It differs
-from other RDF serializations in that it does not translate a graph to
-a sequence of characters (i.e., a proper serialization), but it
+JSON-LD 1.0 support was the most problematic result format to
+implement.  It differs from Turtle-based serialization formats in that
+it does not translate a graph to a sequence of characters, but it
 instead performs transformations between RDF graphs and JSON trees.
-As such it has to merry requirement from both paradigms.  In this
-sense JSON-LD is similar to RDF/XML which is already relatively
-complex when compared to the N3-family of serializations (N3, Turtle,
-TRiG, N-Quads and N-Triples).
+As such it has to merry requirements from both paradigms.  In this
+sense JSON-LD is similar to RDF/XML which undertakes a graph to/from
+tree mapping as well.
 
-There are currently implementations for C\#, Go, Java, JavaScript,
-PHP, Python, Ruby.  Most notably support for C and C++, languages in
-which very many low-level database systems are written, is currently
-missing.  Illustratively, one of the most widely used C++-based RDF
-processors, Raptor (\url{http://librdf.org/raptor/}) says on its web
-site:
+JSON-LD is valid JSON, the primary data interchange format for web
+programmers.  As such, JSON-LD is a good way of lowering the entry
+level for this user group.  The JSON-LD format is relatively cosly to
+generate and process, because not all aspects of RDF can be directly
+encoded in JSON.  For this a \emph{context} that steers the data
+transformation step needs to be defined (while generating) and applied
+(while processing).  However, as long as JSON-LD is used for
+interchanging smaller chunks of data, the extra processing time is not
+an issue.
 
-\begin{quote}
-  JSON-LD is not supported - too complex to implement.
-\end{quote}
+There are currently JSON-LD implementations for C\#, Go, Java,
+JavaScript, PHP, Python, Ruby.  Most notably support for C and C++,
+languages, in which many low-level database systems and libraries are
+written, is missing.  Sadly, the top C++-based RDF processor, Raptor
+(\url{http://librdf.org/raptor/}), states on its web site that
+``JSON-LD is not supported - too complex to implement''.
 
 Virtuoso does not support loading JSON-LD files\footnote{See
   \url{https://github.com/openlink/virtuoso-opensource/issues/478}}
@@ -308,81 +340,97 @@ included it into library plRdf\footnote{See
 
 While GeoJSON addresses users from the web and geo domain, it may not
 address more advanced GIS users who may want to use more comprehensive
-formats standardized by the OGC, such as GML, WFS and WMS.  The cost
-of integrating these OGC formats into a Linked Data platform are
-considerable, because they have their own vocabularies that need to be
-mapped to and from RDF.  The OGC and W3C are currently working on this
-integration in the Spatial Data on the Web Working Group\footnote{See
+formats standardized by the OGC.  These formats include GML, WFS and
+WMS.  The cost of integrating these OGC formats into a Linked Data
+platform are considerable, because they have their own vocabularies
+that need to be mapped to and from RDF.  Luckily, the OGC and W3C are
+currently working on integrating their respective standards within the
+Spatial Data on the Web Working Group\footnote{See
   \url{https://www.w3.org/2015/spatial/wiki/Main_Page}}.  It is
-probably wise to wait until that WG has come up with a first
-(proposed) standard.
+probably a good idea to wait until that Working Group has come up with
+a first (proposed) standard.
 
 
 \section{Findability (lesson 1a)}
 
+\subsection{Vocabulary overview}
+
 One of the most difficult things for web programmers, when confronted
-with the system, is to find out \emph{what is in the data}.  For
-existing web services this is usually not an issue: there is a limited
-number of entity types and relations that can be queries.  For
-instance, a product review site has users who write reviews for
-products.  Products may have companies producing them and users may
-themselves have ratings.  That's about it.
+with a Linked Geodata service, is to find out \emph{what is in the
+  data}.  For non-Linked Data services this is usually not a problem:
+there is a limited number of entity types and relations that can be
+queried.  For instance, a product review site may have users who write
+reviews for products.  Products may have companies producing them and
+users may themselves have ratings to denote their trust level.  That's
+about it.
 
 Linked Data is very different: the monument dataset that we started
 out with contains over a hundred unique relationships between entities
 belonging to dozens of different types.  And this is only one dataset.
-It is inherently impossible to provide a overview of what is in a
+It is inherently difficult to provide an overview of what is inside a
 large collection of Linked Data, in the same way in which it is
 impossible to provide an overview of what is in a large collection of
-the web.  What we can do is come up with smart data visualization
-techniques.  We found out that no such techniques are currently
-available.
+the web.  We have not found a satisfactory solution for this problem,
+which is widely recognized as a difficult problem in Linked Data.  We
+do see several possible solutions but have not implemented them yet:
 
-\begin{comment}
+\begin{itemize}
+
+\item Faceted browsers map (part of) the schema to option lists.  By
+  selecting the options lists TODO
+
+\item Hierarchy visualization can be used to display the class and/or
+  property hierarchy.  StarDog uses this in their default data
+  browser.  Since our datasets currently do not contain hierarchies
+  this options would first require a more detailed data model.
+
+\end{itemize}
+
+
+\subsection{Data overview}
+
+\begin{itemize}
+
+\item Various data visualization techniques have been proposed for
+  Linked Data, but many of them only work with small data collections.
+  E.g., spring embedding visualizations result in unwieldy visuals
+  when they include more than a few thousand nodes.
+
+\end{itemize}
+
+
+\subsection{Free text search}
+
 Datasets can be very large, so good search functions are required to
 let users find the needle in the haystack.
-
-Why
-
-Different users need different information, for example a user who is
-interested in locations of bicycle stands, does not need a map with
-both bicycle stands and trees on it.  If you allow users to search
-through dataset based on space, time and theme, data is better
-retrievable.
-
-A user-friendly web service enabling users to easily and intuitively
-search and find data.
-
-Provide good search functions, for example let users search for whole
-datasets or single objects based on space, time and theme (keyword or
-category).
-\end{comment}
-
 
 
 \section{Keep it simple (lesson 1B)}
 
-Simplicity is notoriously difficult to achieve in Linked Data.
-Simplicity is usually implemented by optimizing for a particular use
-case, but Linked Data promotes \emph{arbitrary reuse}.  However, this
-does not mean that exisitng approaches of Linked Geodata publishing
-cannot be simplified.  We do observe that simplifications in Linked
-Geodata publishing are costly to implement because they must often be
-implemented at multiple layers.
+Simplicity is notoriously difficult to achieve in Linked Data.  The
+main reason for this is that simplicity is usually implemented by
+optimizing for a particular use case.  Linked Data is about ``the
+re-use of information in ways that are unforseen by the
+publisher''~\cite{Bernerslee2006}.  However, this does not mean that
+exisitng approaches of Linked Geodata publishing cannot be simplified.
+We do observe that simplifications in Linked Geodata publishing are
+costly to implement.  Simply changing something inside the User
+Interface is not enough: there are often conceptual reasons why
+certain things are difficult.  We now give an example of a
+simplification we were able to implement.
 
 
 \subsection{Uniform representation of geodata}
 
-A concrete example of the high cost of simplifying Linked Geodata
-publishing arises when we want to make it easy to query all geodata in
-a uniforma anf simple way.  Starting out with our source datasets this
-is not possible because geodata can be represented in different ways
-in RDF.  The following pattern is commonly used:
+It would significantly simpler for the user if geospatial data would
+be queried in a uniform and simple way.  However, our source datasets
+contain multiple approaches towards representing geospatial data.  The
+following pattern is commonly used:
 
 \begin{minted}{turtle}
-  entitiy:x geosparql:defaultGeometry _:a                    .
-  _:a       geosparql:asWKT           "POINT(5.46 51.35)"    ;
-            rdf:type                  geosparql:Geometry     .
+  entity:x geosparql:defaultGeometry _:a                    .
+  _:a      geosparql:asWKT           "POINT(5.46 51.35)"    ;
+           rdf:type                  geosparql:Geometry     .
 \end{minted}
 
 We believe that the above three statements can be rewritten to a
@@ -396,14 +444,14 @@ This version has the following benefits:
 
 \begin{itemize}
 
-\item No introduction of unnecessary blank node terms.
+\item No introduction of an unnecessary blank node term (\textt{\_:a}).
 
-\item More explicit type information of the kind of geometry (a point
-  in this case).
+\item More explicit type information about the kind of geometry
+  (\textt{def:point} i.o. \textt{geosparql:Geometry}).
 
 \end{itemize}
 
-These properties result in direct usability improvements:
+These changes bring about the following usability improvements:
 
 \begin{itemize}
   
@@ -413,14 +461,13 @@ These properties result in direct usability improvements:
 
 \item We can query for geometries of a specific type without having to
   parse geometry values.  For instance, for one of our map views we
-  wanted to show polygons but not points and lines.  We achieved this
-  with the query%~\ref{lst:datatype}.
+  want to show polygons but not points and lines.  We achieve this
+  with the following query:
 
 \end{itemize}
 
 \begin{minted}{sparql}
   ?x def:geometry ?y FILTER (datatype(?y) = def:polygon)
-  %\label{lst:datatype}
 \end{minted}
 
 

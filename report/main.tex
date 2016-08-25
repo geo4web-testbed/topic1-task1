@@ -420,31 +420,33 @@ certain things are difficult.  We now give an example of a
 simplification we were able to implement.
 
 
-\subsection{Uniform representation of geodata}
+\subsection{Uniform \& simple geodata representation}
 
-It would significantly simpler for the user if geospatial data would
-be queried in a uniform and simple way.  However, our source datasets
-contain multiple approaches towards representing geospatial data.  The
-following pattern is commonly used:
+One of the ways in which geospatial data handling can be simplified is
+by enforcing a uniform representation format.  The representation
+format must be generic enough to allow all representations that occur
+in the source datasets to be converted to it.  At the same time, the
+uniform representation must allows data to be queried in a simple way.
+The following pattern is commonly used in our source datasets:
 
 \begin{minted}{turtle}
-  entity:x geosparql:defaultGeometry _:a                    .
-  _:a      geosparql:asWKT           "POINT(5.46 51.35)"    ;
-           rdf:type                  geosparql:Geometry     .
+  entity:x geosparql:defaultGeometry _:1                .
+  _:1      geosparql:asWKT           "POLYGON((…))"     ;
+           rdf:type                  geosparql:Geometry .
 \end{minted}
 
-We believe that the above three statements can be rewritten to a
-single statement conveying the same meaning:
+THe above three statements can be rewritten to a single statement
+conveying the same meaning:
 
 \begin{minted}{turtle}
-  entity:x def:geometry "POINT(5.46 51.35)"^^def:point .
+  entity:x def:geometry "POLYGON((…))"^^def:polygon .
 \end{minted}
 
 This version has the following benefits:
 
 \begin{itemize}
 
-\item No introduction of an unnecessary blank node term (\textt{\_:a}).
+\item No introduction of an unnecessary blank node term (\textt{\_:1}).
 
 \item More explicit type information about the kind of geometry
   (\textt{def:point} i.o. \textt{geosparql:Geometry}).
@@ -470,6 +472,24 @@ These changes bring about the following usability improvements:
   ?x def:geometry ?y FILTER (datatype(?y) = def:polygon)
 \end{minted}
 
+We use Well-Known Text (WKT) as a uniform representation format, since
+it supports many different shapes (17) with a simple
+grammar\footnote{See
+  \url{http://svn.osgeo.org/postgis/trunk/doc/bnf-wkt.txt} for a
+  Backus-Naur Form notation of the grammar.} that is easy to
+implement.  All other representations that appear in our source datasets can be converted to our single-triple representation.  For intance, the following WGS84 representations
+
+\begin{minted}{turtle}
+  entity:y wgs84:lat  "51.35"^^xsd:float ;
+           wgs84:long "5.46"^^xsd:float  .
+\end{minted}
+
+is converted to
+
+\begin{minted}{turtle}
+  entity:y def:geometry "POINT(5.46 51.35)"^^def:polygon .
+\end{minted} 
+
 
 \begin{comment}
 \subsection{Who is allowed to do what (lesson 1c)}
@@ -494,7 +514,14 @@ Geodata, as it is currently published, does not contain explicit
 links.  Links can be inferred from implicit cues by human domain
 experts, but not by automated and domain-independent means.  This
 means that implementing lesson 2b (Foster to link everything with
-everything) requires a relatively large investment.
+everything) requires a relatively large investment.  We can
+distinguish the following issues with linking:
+
+\begin{itemize}
+  \item Atomic terms are actually compound terms whose components and
+    links are implicit.  We solve this with \emph{value unpacking}
+    (Section~\ref{sec:value_unpacking}).
+\end{itemize}
 
 The same value sometimes denotes the same thing.  E.g., `Appingedam'
 denotes a municipality.  However, Appingedam is sometimes denoted by
@@ -509,11 +536,12 @@ and a tourist uses `Appingedam' to denote the center of Appingedam).
 
 \subsection{Value unpacking}
 \label{sec:grammar}
+\label{sec:value_unpacking}
 
 A single value in the source dataset may describe multiple entities
-and relations between them.  For instance the small `buurtcode' string
-\textt{BU00030002} denotes three entities and two spatial containment
-relations:
+and relationships between them.  For instance the following
+`buurtcode' string \textt{BU00030002} denotes three entities and two
+spatial containment relations between them:
 
 \begin{minted}{turtle}
   buurt:00030002 rdf:type        def:Buurt      .
@@ -524,13 +552,13 @@ relations:
 \end{minted}
 
 We call the conversion of a simple value to multiple entities and
-relations `value unpacking'.  Domain experts have `packed' meaning
-into encodings like \texttt{BU00030002}.  Non-domain experts and
-machines cannot `see' the meaning that is inside the package.  In
-order to make the meaning widely available we must `unpack' it using a
-grammar.  For the above code we have to construct the following
-grammar.\footnote{The grammar is written in Augmented Backus-Naur Form
-  (ABNF)~\cite{Crocker2008}.}
+relations \emph{value unpacking}.  The idea behind the term is that
+domain experts have `packed' meaning into encodings like
+\texttt{BU00030002}.  In order to `open up' this information to
+non-domain experts and machine processors, we have to `unpack' the
+meaning again by using a grammar.  For the above `buurtcode' we have
+to construct the following grammar (written in Augmented Backus-Naur
+Form (ABNF)~\cite{Crocker2008}):
 
 \begin{minted}{abnf}
 buurt         := "BU" gemeente-code wijk-code buurt-code
@@ -542,24 +570,24 @@ wijk-code     := DIGIT DIGIT
 \end{minted}
 
 When loading the data we have to tell the machine to \emph{parse}
-values within a given column, tag or key using the above grammar.  The
-machine is then able to automatically construct the encoded entities
-and relations for all such values.
-
-Notice that the above has to be done for every column, tag or key.
-Moreover, not all values can be parsed in this way.  For instance,
-human language can generally not be parsed by a machine processor.
+values that appear in certain locations (either columns, tags or keys)
+by using the above grammar.  The machine is able to automatically
+construct the encoded entities and relations for all conforming
+values.  The high cost of value unpacking is caused by the fact that
+grammars are domain-dependent and by the fact that some grammars are
+more complex.
 
 
 \subsection{Value enrichment}
+\label{sec:value_enrichment}
 
 Besides combining and splitting values, we sometimes find that a value
 is incomplete: it does not contain all the information we need in
-order to interpret it.
+order to fully interpret it.
 
 For instance, very many values are encoded in human languages.  In
-order to do anything useful with these values we must at least know to
-which language they belong.  For this we run automatic language
+order to do anything useful with these values we must at least know
+the language to which they belong.  For this we run automatic language
 detection algorithms on the values.  The accuracy for medium-length
 strings is known to be very high (Figure~\ref{fig:natlang}
 
@@ -577,19 +605,22 @@ data collection is to distinguish between Dutch and English strings.
 
 
 \subsection{Value combining}
+\label{sec:value_combining}
 
-For example events are often described with a day, month and/or year
-column, tag or key:
+Sometimes multiple values can be combined into one aggregated value.
+This is specifically the case for datatypes.  For example events are
+often described with a day, month and/or year column in the source
+day:
 
 \begin{minted}{text}
   <EVENT-ID> | 1997 | Aug | 7
 \end{minted}
 
-In order for dates to be comparable with one another they have to be
-converted to values of XML~Schema Part~2:
+In order for dates to be comparable with one another in RDF they have
+to be converted to values of XML Schema
 Datatypes~1.1~\cite{Peterson2012}.  Month names can be converted using
-a simple, one-to-one grammar (Section~\ref{sec:grammar}).  After that
-values can be converted manually to datatypes.
+a simple, one-to-one mapping.  After that values can be converted
+to datatypes.  The following
 
 \begin{minted}{turtle}
   event:x def:day   "07"^^xsd:gDay    ;
@@ -597,29 +628,40 @@ values can be converted manually to datatypes.
           def:maand "8"^^xsd:gMonth   .
 \end{minted}
 
-Values can now be automatically combined into the following more
-complex datatype:
+would be combined into
 
 \begin{minted}{turtle}
   event:x def:date "1997-08-07"^^xsd:date .
 \end{minted}
 
 Because support for XML Schema Datatypes is very good overall, dates,
-times, durations, lengths, weights, etc. can now be compared through
+times, durations, lengths, weights, etc. can all be compared with
 built-in functions.  For instance the function
 \textt{op:dateTime-less-than} is used by SPARQL 1.1 implementations to
 directly compare an event to all events that happened before
 it~\cite{Malhotra2015}.
 
+Value combining is only a good idea if the act of combining is
+lossless, i.e., no information is lost in the process.  For instance,
+replacing the \textt{foaf:givenName} and \textt{foaf:familyName}
+properties with the combined \textt{foaf:name} property is not an
+example of value combining, because it loses the cutoff point between
+the given and the family name.
+
+
+\subsection{Remove erroneous, empty and null values}
 
 
 \section{Persistent IRIs (lesson 2c)}
+\label{sec:persistent_iris}
 
-It is very difficult to ensure persistent IRIs.
+It is very difficult to ensure persistent IRIs.  Most datasets have no
+IRIs at all, so we have to mint IRIs for each entity.  This is easy
+when the source data has a key.  If this is not the case then 
 
-Most datasets have no IRIs at all, so we have to mint IRIs for each
-entity.  While enriching the data (Section~\ref{sec:enrichment}) the
-number of entities increases.  These requires IRIs as well.
+While enriching
+the data (Section~\ref{sec:enrichment}) the number of entities
+increases.  These requires IRIs as well.
 
 We have found the Dutch Linked Data URI strategy to be very beneficial
 during this process.  It distinguishes between IRIs for instance
@@ -898,7 +940,30 @@ flow from this tender under the CC/by license.
 \end{comment}
 
 
+\section{Metadata}
+\label{sec:metadata}
+
+It is important for users to be able to get an overview of the
+datasets that are disseminated in a Linked Data service.  While it is
+possible to insert a human-readable string description, this is not a
+sustainable solution.
+
+It is a challenge to base 
+
+\begin{itemize}
+\item \textt{void:classes}
+\item \textt{void:dataDump}
+\item \textt{void:distinctObjects}
+\item \textt{void:distinctSubjects}
+\item \textt{void:feature}
+\item \textt{void:properties}
+\item \textt{void:triples}
+\item \textt{void:vocabulary}
+\end{itemize}
+
+
 \section{Quantifying the effort}
+\label{sec:quantifying}
 
 There were also some `hidden costs', i.e., either things that we
 expected to be very simple but that turned out to be very difficult,

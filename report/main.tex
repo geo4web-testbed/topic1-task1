@@ -24,6 +24,8 @@
 % Font corrections.
 \newcommand{\textt}[1]{{\small \texttt{#1}}}
 
+\setlist{nolistsep}
+
 % Disable default paragraph indentation.
 \setlength{\parskip}{\baselineskip}
 \setlength{\parindent}{0cm}
@@ -83,9 +85,9 @@ Quantification is performed in a four-stage process:
 \begin{itemize}
 
 \item Information gathering: Based on Linked Data and Geodata experts
-  and available we perfom a quick information gathering round in which
+  and available we perform a quick information gathering round in which
   we form an overview of the directions we can take in order to answer
-  our research question.  The information gathered is not inteded to
+  our research question.  The information gathered is not intended to
   be complete but is intended to give a global direction for
   subsequent stages.  A more extensive information gathering approach
   may be undertaken in the future.
@@ -93,7 +95,7 @@ Quantification is performed in a four-stage process:
 \item Scaffolding step: Based on the information gathered, we make an
   assessment of current platforms, libraries and tools that would
   allow the requirements to be implemented.  Also, some of the
-  stengths and weaknesses that did not surface during the information
+  strengths and weaknesses that did not surface during the information
   gathering stage may come up here.
 
 \item Filling in the blanks: Not all requirements may be available
@@ -105,7 +107,7 @@ Quantification is performed in a four-stage process:
   development may take a while.  On the other hand, in-house
   development is relatively expensive but is likely to result in a
   quick first working solution.  In practice, the challenge is to turn
-  components that are developed in-houde for speed into long-running
+  components that are developed in-house for speed into long-running
   community projects afterwards.
 
 \item Test \& iterate: Once an acceptable platform is assembled we
@@ -117,19 +119,33 @@ Quantification is performed in a four-stage process:
 \end{comment}
 
 
-\section{First strategy: use a SotA triple store}
+\subsection{Primary use case}
+\label{sec:use_case}
 
-When we started out building our geospatial Linked Data demonstrator
-we performed an industry-wide assessment of existing tools.  For this
-we have consulted people from multiple domains.  We first determined
-the leading query paradigm for geospatial Linked Data: this is
-GeoSPARQL~\cite{Battle2011}.  We then determined the tool with the
+Primary use case: proximity queries
+
+
+\section{Storage}
+\label{sec:storage}
+
+The first choice we have to make is how we want to store Linked
+Geospatial data.  This choice has repercussions for almost all other
+aspects of the system, e.g., which queries can be performed and how
+long it takes to answer them.
+
+
+\subsection{First strategy: use a SotA triple store}
+
+Our first intuition was that SotA triple stores would be able to
+support geospatial data quite well.  We were wrong in this.  We first
+determined the leading query paradigm for geospatial Linked Data: this
+is GeoSPARQL~\cite{Battle2011}.  We then determined the tool with the
 best GeoSPARQL support: this is Virtuoso\footnote{See
   \url{https://github.com/openlink/virtuoso-opensource}}.  We have
-loaded the data into an endpoint hosted at
-\url{http://sparql.geonovum.triply.cc/sparql}.
+loaded the data into an endpoint running version 7.2 (March 2016)
+hosted at \url{http://sparql.geonovum.triply.cc/sparql}.
 
-However, even Virtuoso does not support all geometries.  Our data
+Unfortunately, Virtuoso does not support all geometries.  Our data
 contains curves, resulting in the following error whenever a curve is
 encountered by the query engine:
 
@@ -138,8 +154,8 @@ encountered by the query engine:
   shape types (e.g., polygon rings and curves) are not yet supported
 \end{minted}
 
-Here is an example of a query that gives the above warning (``Pairs of
-intersecting geometries that belong to the same resource.''):
+Here is an example of a query that gives the above warning (``pairs of
+intersecting geometries that belong to the same resource''):
 
 \begin{minted}{sparql}
 PREFIX geo: <http://www.opengis.net/ont/geosparql#>
@@ -158,9 +174,9 @@ indicated by the following message:
   Virtuoso S1T00 Error SR171: Transaction timed out
 \end{minted}
 
-An example is an altered version of the above query (``Five pairs of
-dissimilar intersecting geometries that belong to the same
-resource.''):
+An example is an altered version of the previous query (``five pairs
+of dissimilar intersecting geometries that belong to the same
+resource''):
 
 \begin{minted}{sparql}
 PREFIX geo: <http://www.opengis.net/ont/geosparql#>
@@ -173,8 +189,8 @@ LIMIT 5
 \end{minted}
 
 Thirdly, not all combinations of supported functions and supported
-shapes are supported.  For instance, the following implements the geo
-query for our original use case:
+shapes are supported.  For instance, the following implements the
+query for our primary use case:
 
 \begin{minted}{sparql}
 PREFIX geo: <http://www.opengis.net/ont/geosparql#>
@@ -207,29 +223,51 @@ seconds, but some queries still do not succeed within that time-frame:
 We must note that both Virtuoso and StarDog are very good triple
 stores overall and that they are working on improving geodata and
 GeoSPARQL support.  It is difficult to assess when those improvements
-will be good enough for the purpose of setting up a Linked Geodata
-service.  It may also be the case that the out-of-the-box experience
-that we have tested can be improved through configuration changes that
-we are unaware of.
+will be good enough to sufficiently support geospatial data
+publication.
 
 
 \section{Second strategy: use a SotA Information Retrieval solution}
 
-%Linked Data Platform (Kadaster)
 We have corroborated our findings about the deficiency of existing
-triple stores with other developers.  A common approach is to perform
-graph queries in a triple store and geospatial queries in a document
-store such a Solr.  This approach results in a good performance and
-coverage of graph/SPARQL queries as well as good performance and
-coverage of geospatial queries.  However, because the results come
-form different backends, it is generally not possible to perform a
-GeoSPARQL query in which graph and geospatial components are
-intertwined.
+triple stores with other developers.  One common approach is to
+perform graph queries in a triple store and geospatial queries in a
+document store such as Solr\seeUrl{http://lucene.apache.org/solr/}.
+This approach results in a good performance and coverage for
+graph/SPARQL queries as well as good performance and coverage for
+geospatial queries.  However, because the results come form two
+disconnected backends, it is generally not possible to efficiently
+perform a GeoSPARQL query in which graph and geospatial components are
+intertwined.  Unfortunately, it is precisely in these integrated
+queries that the benefits of using Linked Data will become apparent
+(Section~\ref{sec:use_case}).
+
+
+\section{Third strategy: use SotA GIS libraries}
+
+Concluding that the previous two strategies will not result in a
+satisfactory spatial data publication platform, we decided to go for
+an out-of-the-box approach by looking beyond common Linked Data
+practices.  We asked GIS experts what they use.
+PostGIS\seeUrl{http://postgis.net/}, based on the
+PostgreSQL\seeUrl{https://www.postgresql.org/} database, was
+unanimously considered the most performant tool for handling
+geospatial data.  Other tool that was mentioned was
+qGIS\seeUrl{http://qgis.org/en/site/}, an Open Source GIS.  Both tools
+use the backend library GEOS\seeUrl{https://trac.osgeo.org/geos}.
+
+Our reasoning was that if PostgreSQL could be successfully combined
+with GEOS that we should be possible to combine a triple store with
+GEOS as well.  In fact, we found a 6 year old research
+paper~\cite{VanHage2010} that had attempted to do the same thing.  The
+paper had combined GEOS as a plugin of
+ClioPatria~\cite{Wielemaker2015}, a triple store that we happened to be
+familiar with.
 
 
 \section{Users have different needs \& capacities (lesson 1)}
 
-One of the ways in whic multiple groups of users can be addressed is
+One of the ways in which multiple groups of users can be addressed is
 by offering result set formats that they are familiar with.  Our
 demonstrator exposes the following result set formats:
 
@@ -268,7 +306,7 @@ Textual serialization formats work well for small results sets.  For
 instance, if someone asks the ten nearest monuments then this can
 easily be returned in a text-based reply.  However, some users have a
 large-scale use case, such as requesting \emph{all} monuments in the
-Nederlands (e..g, with the purpose of data visualization) A textual
+Netherlands (e..g, with the purpose of data visualization) A textual
 result set of this size is difficult to process.  With HDT the data is
 not only much smaller in size (as with regular compression) but can
 also be easily processed by the user.
@@ -313,7 +351,7 @@ tree mapping as well.
 
 JSON-LD is valid JSON, the primary data interchange format for web
 programmers.  As such, JSON-LD is a good way of lowering the entry
-level for this user group.  The JSON-LD format is relatively cosly to
+level for this user group.  The JSON-LD format is relatively costly to
 generate and process, because not all aspects of RDF can be directly
 encoded in JSON.  For this a \emph{context} that steers the data
 transformation step needs to be defined (while generating) and applied
@@ -410,9 +448,9 @@ let users find the needle in the haystack.
 Simplicity is notoriously difficult to achieve in Linked Data.  The
 main reason for this is that simplicity is usually implemented by
 optimizing for a particular use case.  Linked Data is about ``the
-re-use of information in ways that are unforseen by the
+re-use of information in ways that are unforeseen by the
 publisher''~\cite{Bernerslee2006}.  However, this does not mean that
-exisitng approaches of Linked Geodata publishing cannot be simplified.
+existing approaches of Linked Geodata publishing cannot be simplified.
 We do observe that simplifications in Linked Geodata publishing are
 costly to implement.  Simply changing something inside the User
 Interface is not enough: there are often conceptual reasons why
@@ -435,7 +473,7 @@ The following pattern is commonly used in our source datasets:
            rdf:type                  geosparql:Geometry .
 \end{minted}
 
-THe above three statements can be rewritten to a single statement
+The above three statements can be rewritten to a single statement
 conveying the same meaning:
 
 \begin{minted}{turtle}
@@ -477,7 +515,7 @@ it supports many different shapes (17) with a simple
 grammar\footnote{See
   \url{http://svn.osgeo.org/postgis/trunk/doc/bnf-wkt.txt} for a
   Backus-Naur Form notation of the grammar.} that is easy to
-implement.  All other representations that appear in our source datasets can be converted to our single-triple representation.  For intance, the following WGS84 representations
+implement.  All other representations that appear in our source datasets can be converted to our single-triple representation.  For instance, the following WGS84 representations
 
 \begin{minted}{turtle}
   entity:y wgs84:lat  "51.35"^^xsd:float ;

@@ -17,9 +17,13 @@
 
 \usepackage[utf8]{inputenc}
 
+\usepackage{longtable}
+
 \usepackage{lscape}
 
 \usepackage{minted}
+
+\usepackage{todonotes}
 
 \usepackage{verbatim}
 
@@ -36,7 +40,6 @@
 \author{Wouter Beek ({\small\url{wouter@triply.cc}})}
 \author{Laurens Rietveld ({\small\url{laurens@triply.cc}})}
 \affil{Triply ({\small\url{http://triply.cc}})}
-\date{v0.2}
 
 \begin{document}
 
@@ -77,6 +80,13 @@ required to follow different rules and regulations depending on the
 domain or context in which it operates, it is possible to quantify the
 investment needed in order to build a Linked Geodata platform that
 implements the lessons learned.
+
+In addition to describing and quantifying the effort required to meet
+the constraints laid down in the existing lessons learned, we also
+describe the problems of publishing Linked Geodata in general.
+According to our assessment there are no off-the-shelf tools that
+allow Linked + geospatial data to be queried with acceptable
+performance.
 
 
 \begin{comment}
@@ -131,6 +141,11 @@ Primary use case: proximity queries
 
 \section{Storage}
 \label{sec:storage}
+
+\begin{quote}
+  Do not use existing WoD products to implement a Web-based geospatial
+  stack.
+\end{quote}
 
 The first choice we have to make is how we want to store Linked
 Geospatial data.  This choice has repercussions for almost all other
@@ -427,13 +442,12 @@ instance, a product review site may have users who write reviews for
 products.  Products may have companies producing them and users may
 themselves have ratings to denote their trust level.  That's about it.
 
-Linked Data is very different: the monument dataset that we started
-out with contains over a hundred unique relationships between entities
-belonging to dozens of different types.  And this is only one dataset.
-It is inherently difficult to provide an overview of what is inside a
-large collection of Linked Data, in the same way in which it is
-impossible to provide an overview of what is in a large collection of
-the web.
+Linked Data is very different: the RCE monument dataset contains over
+a hundred unique relationships between entities belonging to dozens of
+different types.  And this is only one dataset.  It is inherently
+difficult to provide an overview of what is inside a large collection
+of Linked Data, in the same way in which it is impossible to provide
+an overview of what is in a large collection of the web.
 
 \textbf{Hierarchy visualization} can be used to display the class
 and/or property hierarchy in a tree view.  E.g., StarDog successfully
@@ -456,16 +470,17 @@ Semantic blogging platform SemBlog.
 \end{figure}
 
 If OWL cardinality restrictions are also present then this can also be
-used to annotate the arcs with.  We are unaware of a tool that does
-this currently, but in theory it should be possible to generate
+used to annotate the arcs.  We are unaware of a tool that does this
+currently, but in theory it should be possible to generate
 visualizations that are somewhat akin to class diagrams in
 object-oriented software engineering (e.g., UML class diagrams).
 
-Unfortunately, our source datasets contain very little hierarchical
-information and no domain/range information.  In order for existing
-visualization techniques to be applicable we have to first perform a
-data enrichment operation.  Data that is automatically converted from
-non-RDF formats will often lack this information.
+Unfortunately, our source datasets (Section~\ref{sec:source_data})
+contain very little hierarchical information and no domain/range
+information.  In order for existing visualization techniques to be
+applicable we have to first perform a data enrichment operation.  Data
+that is automatically converted from non-RDF formats will often lack
+this information.
 
 \paragraph{Cost}
 The cost of vocabulary visualization are low when the data contains
@@ -477,12 +492,14 @@ relatively high.
 \subsection{Instance findability}
 \label{sec:instance_findability}
 
-There are two main approaches towards finding instances in Linked
-Datasets.  The former is based on \textbf{text-based search}, which
-uses techniques from Information Retrieval to perform string matching
-in combination with relevance ranking.  We implemented a simple
-text-based search feature that indexes all RDF literals and matches
-substrings against them.
+Datasets can be very large, so good search functions are required to
+let users find the needle in the haystack.  There are two main
+approaches towards finding instances in Linked Datasets.  The former
+is based on \textbf{text-based search}, which uses techniques from
+Information Retrieval (IR) to perform string matching in combination
+with relevance ranking.  We implemented a simple text-based search
+feature that indexes all RDF literals and matches substrings against
+them.
 
 Figure~\ref{fig:search} shows the results for searching for the
 `Hofnar' building.  One result is the building as described by the
@@ -501,7 +518,10 @@ What is currently lacking is a good ranking over the matched results.
 This would put resources called `Hofnar' higher in the search results
 than resources that only contain the word somewhere in a lengthy
 description.  Better search results are obtained by using a dedicated
-IR backend like ElasticSearch/Lucene.
+IR backend like ElasticSearch/Lucene.\footnote{An example of an
+  ElasticSearch deployment over Linked Data is our LOD~Search
+  (\href{http://lodsearch.org}) endpoint that indexes 4.3 billion
+  literals.}
 
 The second approach for finding instances in Linked Data is not based
 on string matching but on the structure of the vocabulary.  It is
@@ -520,53 +540,42 @@ browser is shown in Figure~\ref{fig:faceted_browser}.
 \end{figure}
 
 We did not add a faceted browser because this requires a structured
-data model, as with the vocabulary overview solutions in
+data model, as with the vocabulary overview solutions discussed in
 Section~\label{sec:vocabulary_overview}.
 
+There are various data visualization techniques that have been
+proposed for generating overviews of Linked Data instances, but many
+of them only work with very small data collections.  E.g., spring
+embedding visualizations result in unwieldy visuals when they include
+more than a few thousand nodes.
 
-\subsection{Data overview}
-\label{sec:data_findability}
-
-
-\begin{itemize}
-
-\item Various data visualization techniques have been proposed for
-  Linked Data, but many of them only work with small data collections.
-  E.g., spring embedding visualizations result in unwieldy visuals
-  when they include more than a few thousand nodes.
-
-\end{itemize}
-
-
-\subsection{Free text search}
-
-Datasets can be very large, so good search functions are required to
-let users find the needle in the haystack.
 
 
 \section{Keep it simple (Lesson 1B)}
 
 Simplicity is notoriously difficult to achieve in Linked Data.  The
 main reason for this is that simplicity is usually implemented by
-optimizing for a particular use case.  Linked Data is about ``the
-re-use of information in ways that are unforeseen by the
-publisher''~\cite{Bernerslee2006}.  However, this does not mean that
-existing approaches of Linked Geodata publishing cannot be simplified.
-We do observe that simplifications in Linked Geodata publishing are
-costly to implement.  Simply changing something inside the User
-Interface is not enough: there are often conceptual reasons why
-certain things are difficult.  We now give an example of a
-simplification we were able to implement.
+optimizing for a particular use case.  According to Tim Berners-Lee
+Linked Data is about ``the re-use of information in ways that are
+unforeseen by the publisher''~\cite{Bernerslee2006}.  However, this
+does not mean that existing approaches of Linked Geodata publishing
+cannot be simplified.  We do observe that simplifications in Linked
+Geodata publishing are costly to implement.  Simply changing something
+inside the User Interface is not enough: there are often conceptual
+reasons why certain things are difficult.  We now give an example of a
+particular simplification we were able to implement.
 
 
 \subsection{Uniform \& simple geodata representation}
+\label{sec:uniform_representation}
 
 One of the ways in which geospatial data handling can be simplified is
 by enforcing a uniform representation format.  The representation
 format must be generic enough to allow all representations that occur
 in the source datasets to be converted to it.  At the same time, the
-uniform representation must allows data to be queried in a simple way.
-The following pattern is commonly used in our source datasets:
+uniform representation must allow data to be queried in a simple way.
+The following pattern is commonly used in our source datasets (e.g.,
+BGT):
 
 \begin{minted}{turtle}
   entity:x geosparql:defaultGeometry _:1                .
@@ -597,13 +606,13 @@ These changes bring about the following usability improvements:
 \begin{itemize}
   
 \item One less level of nesting simplifies querying.  For instance, we
-  need one LDF request to retrieve the geometry of an entity instead
-  of two.
+  need one Linked Data Fragment request to retrieve the geometry of an
+  entity instead of two.
 
 \item We can query for geometries of a specific type without having to
   parse geometry values.  For instance, for one of our map views we
-  want to show polygons but not points and lines.  We achieve this
-  with the following query:
+  want to display polygon regions, but not points and lines.  We
+  achieve this with the following query:
 
 \end{itemize}
 
@@ -612,7 +621,7 @@ These changes bring about the following usability improvements:
 \end{minted}
 
 We use Well-Known Text (WKT) as a uniform representation format, since
-it supports many different shapes (17) with a simple
+it supports many different shape types (17) with a simple
 grammar\seeUrl{http://svn.osgeo.org/postgis/trunk/doc/bnf-wkt.txt}
 that is easy to implement.  All other representations that appear in
 our source datasets can be converted to our single-triple
@@ -634,9 +643,9 @@ is converted to
 
 All our data was published as Linked Open Data with no authentication.
 In general we notice that Linked Data is far more often \emph{read}
-than \emph{written}.  Our demonstration system does allow authorized
-users to send SPARQL Update requests, but we have not advertised or
-used this functionality in the current research.
+than \emph{written}.  Our demonstration system allows authorized users
+to perform SPARQL Update requests, but we have not advertised or used
+this functionality in this project.
 
 
 \subsection{Communities speak different languages (Lesson 1D)}
@@ -646,12 +655,33 @@ used this functionality in the current research.
 
 Because communities speak in different languages, geodata is currently
 published in various different dialects.  Many of these dialects are
-not Linked data and do not contain explicit links.  Links can be
-inferred from implicit cues by human domain experts, but not by
-automated and domain-independent means.  This means that implementing
-lesson 2b (Foster to link everything with everything) requires a
-relatively large investment.  We can distinguish the following issues
-with linking:
+not Linked Data and do not contain explicit links.  The source
+datasets that we converted were serialized in XML, CSV and JSON.
+
+Because existing tools do not stream data but load everything into
+memory we wrote our own data transformation scripts from XML/CSV/JSON
+to RDF.  Only with a streamed approach is it possible to transform
+large datasets.  Other source formats that were given to us were too
+complicated to transform within reasonable time.  For instance dBase
+and Microsoft Access datasets are binary formats that depend on
+non-free software that is not commonly available in a web server
+setting.
+
+
+%\section{Help search engines discover you (Lesson 2)}
+
+
+%\section{Show search engines the way with XML sitemap (Lesson 2A)}
+
+
+\section{Link everything with everything (Lesson 2B)}
+\label{sec:link}
+
+Links can be inferred from implicit cues by human domain experts, but
+not by automated and domain-independent means.  This means that
+implementing lesson 2B (``Foster to link everything with everything'')
+requires a relatively large investment.  We can distinguish the
+following issues with linking:
 
 \begin{itemize}
   \item Atomic terms are actually compound terms whose components and
@@ -725,16 +755,7 @@ For instance, very many values are encoded in human languages.  In
 order to do anything useful with these values we must at least know
 the language to which they belong.  For this we run automatic language
 detection algorithms on the values.  The accuracy for medium-length
-strings is known to be very high (Figure~\ref{fig:natlang}
-
-\begin{figure}
-  \includegraphics[width=\linewidth]{img/natlang.png}
-  \caption{Accuracy of natural language detection in RDF strings for
-    the 10 most frequent languages.  Strings of similar length are
-    combined in buckets.  The size of buckets increases
-    logarithmically.  Figure taken from~\cite{Beek2016c}.}
-  \label{fig:natlang}
-\end{figure}
+strings is known to be very high.~\cite{Beek2016c}
 
 The main benefit of running natural language detection on the current
 data collection is to distinguish between Dutch and English strings.
@@ -786,23 +807,15 @@ the given and the family name.
 
 
 \subsection{Remove erroneous, empty and null values}
+\label{sec:null}
 
-TODO
-
-
-\section{Help search engines discover you (Lesson 2)}
-
-TODO
-
-
-\section{Show search engines the way with XML sitemap (Lesson 2A)}
-
-TODO
-
-
-\section{Link everything with everything (Lesson 2B)}
-
-TODO
+Null values are often domain-dependent.  For instance, in CBS data the
+value `-99999999' is used to denote unknown values.  Errors in the
+data can be found by performing a statistical outlier test.  Not all
+outliers are errors, so the results of an outlier test have to be
+manually checked as well.  For the CBS dataset we found the value
+`-99999999.0' as an outlier, which is probably a typo of the
+domain-specific null value.
 
 
 \section{Persistent IRIs (Lesson 2C)}
@@ -857,9 +870,8 @@ as it was indexed by Google relatively fast. Read more here
 
 TODO
 
-\section{Deal with multiple developers \& devices (Lesson 3)}
+%\section{Deal with multiple developers \& devices (Lesson 3)}
 
-TODO
 
 \section{Serve results in different flavors (Lesson 3A)}
 
@@ -894,6 +906,7 @@ demonstrator.
     SPARQL 1.1 TSV  & \textt{text/tab-separated-values} \\
     \hline
     SPARQL 1.1 XML  & \textt{application/sparql-results+xml} \\
+    \hline
   \end{tabular}
   \caption{Overview of the Media Types supported by the demonstrator.}
   \label{tab:media_type}
@@ -972,13 +985,50 @@ negotiation should be discouraged because of the following reasons:
 
 
 \section{Improve performance, reduce payload (Lesson 3B)}
+\label{sec:http_compression}
+\label{sec:reduce_precision}
+\label{sec:clustering}
 
-TODO
+\paragraph{HTTP compression}
+Compression of HTTP reply bodies is easy to implement by `upgrading'
+the output stream to which the reply is written to Gzip/Deflate.
+Every HTTP server supports this.
+
+\paragraph{Reduce precision}
+The required accuracy of geometry shapes is application dependent:
+some applications require maximum detail (e.g., centimeters) while
+others only need to draw a rough map (e.g., tens of meters).  For this
+reason we implemented an IRI query component called \textt{frac} that
+sets the maximum lenght of the fractional part of longitudes and
+latitude values.
+
+A problem with this approach is that we do not know the precision of
+longitude and latitude values.  Since many systems use floating-point
+numbers to represent longitude and latitude values, it is generally
+unclear which part of the fractional part is truthful and which part
+is a technical detail.  This problem can easily be solved by using
+ratial numbers to represent longitude and latitude values.  Ratial
+numbers with decimal denominator allow the precision to be expressed
+by the numerator.  Unfortunately, since our source datasets all use
+floating point numbers and therefore remove precision information, we
+were unable to use ratial number notation to express precision.
+
+A second approach to reducing the precision of geospatial shapes is to
+reduce the number of points that are used to represent shape outlines.
+This requires relatively complicated algorithms like
+Ramer–Douglas–Peucker or Visvalingam–Whyatt to be implemented.  We did
+not implement this form of precision reduction because these
+algorithms are currently not available in the language in which our
+triple store is written.  A library that does support these algorithms
+is the JavaScript library
+TopoJSON\seeUrl{https://github.com/mbostock/topojson}.
 
 
-\section{Do not copy data but use a proxy (Lesson 4)}
-
-TODO
+\paragraph{Filtering}
+Geospatial support in SotA triple stores returns results in a bounding
+box.  When very many geospatial shapes are displayed in close
+proximity to each other it is sometimes more useful to cluster them
+into a single marker.  \todo{TODO}
 
 
 \begin{comment}
@@ -1028,70 +1078,177 @@ all.  In fact, there were many perfectly valid requests by the web
 programmers we worked with that could not be easily implemented by
 integrating some existing library.
 
+As Table~\ref{tab:quantifying} shows, the costs of setting up a web
+service for Linked Geodata are still prohibitive.  In practice, some
+of the costs can be reduced in the following `shortcuts':
+
+\paragraph{Points only}
+Many of the deficiencies of SotA triple stores can be worked around by
+reducing all geometries to 2D points.  GeoSPARQL functions between
+points are mostly supported by existing triple stores and are faster
+to compute.  The downside to this is that much of the geospatial
+information is lost and very many geospatial queries (`contains',
+`intersects') cannot be performed at all.
+
+\paragraph{Start with Linked Data}
+In this research project we had to split development costs between
+implementing a web service and converting/transforming data.  By
+starting out with Linked Data a big chunk of the costs can be saved
+(approx. 40\% in our case).
 
 \begin{landscape}
-  \begin{table}
-    \begin{tabular}{|p{1.25cm}|p{4cm}|p{4cm}|p{10cm}|p{1cm}|}
-      \hline
-      \textbf{Lesson} & \textbf{Problem} & \textbf{Solution} & \textbf{Cost} & \textbf{Section} \\
-      \hline
-      \hline
-      1 & Web programmers know\&like JSON & Return results in JSON-LD & Hours when used for smaller result sets and when programming in a supported language.  Days in an unsupported language.  Do not use at all for large data collections. & \ref{sec:jsonld} \\
-      \cline{2-4}
-      & Map programmers know\&like GeoJSON & Return results in GeoJSON & Low cost due to a simple format.  Cannot be read as LOD. & \ref{sec:geojson} \\
-      \cline{2-4}
-      & GIS experts know\&like OGC standards & Currently no LOD-compatible solution & Wait until OGC and W3C come with an integrated standard & \ref{sec:ogc} \\
-      \hline
-      1a & Vocabulary overview & Hierarchy visualization & Low cost when the data contains hierarchical information.  High cost if the data model first has to be extended with hierarchical information. & \ref{sec:vocabulary_overview}\\
-      \cline{3-3}
-      & & Domain/range visualization & \\
-      \cline{2-3}
-      & Instance findability  & Faceted browser & \\
-      \cline{3-4}
-      & & Text-based search & \\
-      \hline
-    \end{tabular}
-  \end{table}
+  \begin{longtable}{|p{1.25cm}|p{3.25cm}|p{3.25cm}|p{8cm}|p{1.25cm}|}
+    \hline
+    
+    \textbf{Lesson} & \textbf{Topic} & \textbf{Task} & \textbf{Cost} &
+    \textbf{Section}\\
+    
+    \hline
+    \hline
+
+    1 & Serve different result set flavors & Serve JSON-LD to web
+    programmers & JSON-LD support costs hours to implement
+    when used for small result sets and when programming in one of the
+    supported languages.  It takes days in an unsupported language
+    (15~hours).  Do not use this approach at all for large data
+    collections. & \ref{sec:jsonld} \\
+
+    \hline
+
+    & & Serve GeoJSON to web programmers & Low cost due to a simple
+    format (1 hour).  This format cannot be read back as LOD. &
+    \ref{sec:geojson} \\
+
+    \hline
+
+    & & GIS experts know\&like OGC standards & Currently no
+    LOD-compatible solutions.  Wait until OGC and W3C come with an
+    integrated standard. & \ref{sec:ogc} \\
+
+    \hline
+
+    1A & Vocabulary overview & Hierarchy visualization & Low cost when
+    the data contains hierarchical information; high cost otherwise. &
+    \ref{sec:vocabulary_overview}\\
+
+    \hline
+    
+    & & Domain/range visualization & Low cost when the data contains
+    domain/range information; high cost otherwise (not implemented). &
+    \ref{sec:vocabulary_overview}\\
+
+    \hline
+    
+    & Instance findability & Faceted browser & Low cost with property
+    and class information; high cost otherwise (not implemented). &
+    \ref{sec:instance_findability}\\
+    
+    \hline
+
+    & & Text-based search & Simple sub-string search based on a SPARQL
+    endpoint: 10 hours.  Complex text-based search with approximate
+    matching using ElasticSearch: 40 hours. &
+    \ref{sec:instance_findability}\\
+
+    \hline
+
+    1B & Keep it simple & Heterogeneous \& nested geo-spatial
+    representations & Convert all shapes to non-nested WKT: 28 hours &
+    \ref{sec:uniform_representation}\\
+
+    \hline
+
+    1D & Different languages & Source data is not Linked Data &
+    Converting data from open text-based formats is cheap: 5-10 hours
+    per format.  Closed binary formats are costly to convert and
+    require specific tools or programming languages to convert. &
+    \ref{sec:conversion}\\
+
+    \hline
+
+    2B & Link everything & Value unpacking & For each encoding format
+    a dedicated unpacking grammar has to be written.  The CBS
+    `buurtcode' grammar took one hour to write. &
+    \ref{sec:value_unpacking}\\
+
+    \hline
+
+    & & Value enrichment & &
+    \ref{sec:value_enrichment}\\
+    
+    \hline
+
+    & & Value combining & &
+    \ref{sec:value_combining}\\
+    
+    \hline
+    
+    & & Remove errors & Outlier detection is easy to perform with a
+    statistical framework like R.  The effort needed to fix erros is
+    linear in the number of outliers that are discovered.  We have
+    spend 4 hours on outlier detection and error removal. &
+    \ref{sec:value_combining}\\
+
+    \hline
+
+    2C & Persistent IRIs & \\
+    
+    \hline
+    
+    2D & Use structure \\
+
+    \hline
+
+    3A & Request different flavors & Use of \textt{Accept} header &
+    Not very well supported by most web servers, but easy to implement
+    by REST libraries or by hand: 12 hours. &
+    \ref{sec:accept_header}\\
+
+    \hline
+
+    & & URL-based content negotiation & Trivial: 1 hour &
+    \ref{sec:url_based_content_negotiation}\\
+    
+    \hline
+
+    3B & Reduce payload & HTTP compression & Supported by every HTTP
+    server: 1 hour & \ref{sec:http_compression}\\
+
+    \hline
+
+    & & Reduce precision & Allowing the maximum length of the
+    fractional part to be set requires low cost (2 hours).
+    Implementing reduction in the number of outline points is low cost
+    if a support library is available. & \ref{sec:reduce_precision}\\
+
+    \hline
+
+    & & Filtering & TODO & \ref{sec:clustering}\\
+    
+    \hline
+    \label{tab:quantifying}
+  \end{longtable}
 \end{landscape}
 
 
-\begin{comment}
 \section{Conclusion}
 
 We conclude that it is not yet possible to go from a loose collection
 of (geo)data sources to a usable web service for web programmers
 within two months.  There are too many missing pieces and the cost of
-data conversion and transformation is simply too high.
+data conversion and data transformation is simply too high.  In
+addition, there are no off-the-self tools that allow Linked Geodata to
+be queried with acceptable performance.  Our exploration shows that it
+is possible to perform query optimization over Linked Data and
+geospatial objects, but within 2 month we were unable to implement
+full GeoSPARQL support.  A full implementation would require further
+development and investment.
 
-However, we do believe that the lessons learned in previous research
-and validated in our research do point to a.
-\end{comment}
-
-
-\subsection{Shortcuts}
-
-We believe that it is possible to speed up and reduce the cost of the
-process of developing a geospatial Linked Data web service by taking
-`shortcuts'.
-
-
-\paragraph{Points only}
-
-Many of the deficiencies of SotA triple stores can be worked around by
-reducing all geometries to 2D points.  GeoSPARQL functions between
-points are mostly supported.  The downside to this is that much of the
-geospatial information is lost and very many geospatial query
-(contains, intersects) cannot be performed at all.  This also do not
-solve the problem that some queries never terminate or that many
-queries take too long.
-
-
-\paragraph{Start with Linked Data}
-
-In this research project we had to split development costs between
-implementing a web service and converting/transforming data.  By
-starting out with Linked Data a big chunk of the costs can be saved
-(approx. 40\% in our case).
+Even though the problems in terms of data storage, conversion and
+transformation are severe, we do believe that the GeoNovum lessons
+learned give the direction that is needed in order to improve existing
+tools in order to make it easier to publish Linked Geodata in the
+future.
 
 
 \bibliographystyle{plain}

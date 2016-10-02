@@ -131,13 +131,32 @@ Quantification is performed in a four-stage process:
 \end{comment}
 
 
-% Lesson 1C: Think carefully about who is allowed to do what
-% Lesson 1D: Each speaks its own language and lives in his own world
+\subsection{Source datasets}
+\label{sec:source_datasets}
 
-\subsection{Primary use case}
-\label{sec:use_case}
+The source datasets in Table~\ref{tab:source_datasets} were used.
 
-Primary use case: proximity queries
+\begin{table}
+  \centering
+  \begin{tabular}{|l|l|l|}
+    \hline
+    \textbf{Dataset} & \textbf{Format} & \textbf{Statements}\\
+    \hline
+    \hline
+    Monumenten & Turtle & 1,356,641\\
+    \hline
+    Beeldbank & XML & 1,108,307\\
+    \hline
+    BGT Valkenswaard & JSON-LD & 946,715\\
+    \hline
+    CBS 2015 & CSV & 613,717\\
+    \hline
+    Gemeentegeschiedenis & NDJSON & 25,073\\
+    \hline
+  \end{tabular}
+  \label{tab:source_datasets}
+\end{table}
+
 
 
 \section{Storage}
@@ -259,8 +278,7 @@ geospatial queries.  However, because the results come form two
 disconnected backends, it is generally not possible to efficiently
 perform a GeoSPARQL query in which graph and geospatial components are
 intertwined.  Unfortunately, it is precisely in these integrated
-queries that the benefits of using Linked Data will become apparent
-(Section~\ref{sec:use_case}).
+queries that the benefits of using Linked Data become apparent.
 
 
 \subsection{Third strategy: use SotA GIS libraries}
@@ -281,8 +299,10 @@ with GEOS that we should be possible to combine a triple store with
 GEOS as well.  In fact, we found a 6 year old research
 paper~\cite{VanHage2010} that had attempted to do the same thing.  The
 paper had combined GEOS as a plugin of
-ClioPatria~\cite{Wielemaker2015}, a triple store that we happened to be
-familiar with.
+ClioPatria~\cite{Wielemaker2015}, a triple store that we happened to
+be familiar with.  This is the triple store that we used in this
+project.
+
 
 
 \section{Communities have different needs \& capacities (Lesson 1)}
@@ -476,7 +496,7 @@ currently, but in theory it should be possible to generate
 visualizations that are somewhat akin to class diagrams in
 object-oriented software engineering (e.g., UML class diagrams).
 
-Unfortunately, our source datasets (Section~\ref{sec:source_data})
+Unfortunately, our source datasets (Section~\ref{sec:source_datasets})
 contain very little hierarchical information and no domain/range
 information.  In order for existing visualization techniques to be
 applicable we have to first perform a data enrichment operation.  Data
@@ -537,7 +557,7 @@ browser is shown in Figure~\ref{fig:faceted_browser}.
   \includegraphics[width=\linewidth]{img/faceted_browser}
   \caption{A faceted browser demo indexing MIT scientists
     (\url{http://hyperstudio.mit.edu/facets}).}
-  \label{fig:search}
+  \label{fig:faceted_browser}
 \end{figure}
 
 We did not add a faceted browser because this requires a structured
@@ -669,36 +689,156 @@ non-free software that is not commonly available in a web server
 setting.
 
 
-%\section{Help search engines discover you (Lesson 2)}
-
-
-%\section{Show search engines the way with XML sitemap (Lesson 2A)}
-
 
 \section{Link everything with everything (Lesson 2B)}
 \label{sec:link}
 
-Links can be inferred from implicit cues by human domain experts, but
-not by automated and domain-independent means.  This means that
-implementing lesson 2B (``Foster to link everything with everything'')
-requires a relatively large investment.  We can distinguish the
-following issues with linking:
+In our source data (Section~\ref{sec:source_datasets}), the
+municipality of Appingedam is denoted by multiple values such as
+`Appingedam' and `GM0003' (gemeentecode).  At the same time,
+occurrences of the same string can denote different things (e.g., the
+area of Appingedam changes over time, the municipality of Appingedam
+is more than just the area of Appingedam, and a tourist uses
+`Appingedam' to denote the center of Appingedam).  The same is true
+for other value types, e.g., `1903' may denote a year in the Gregorian
+calendar or the length of a road in meters.  The challenge of instance
+term linking is to link all and only terms that denote the same
+resource.  We distinguish between the following two strategies towards
+linking:
 
-\begin{itemize}
-  \item Atomic terms are actually compound terms whose components and
-    links are implicit.  We solve this with \emph{value unpacking}
-    (Section~\ref{sec:value_unpacking}).
-\end{itemize}
+\begin{description}
 
-The same value sometimes denotes the same thing.  E.g., `Appingedam'
-denotes a municipality.  However, Appingedam is sometimes denoted by
-`GM0003' (gemeentecode) and occurrences of the same string can denote
-different things (e.g., the area of Appingedam changes over time, the
-municipality of Appingedam is more than just the area of Appingedam,
-and a tourist uses `Appingedam' to denote the center of Appingedam).
+\item [Heuristic] This form of linking relies on structural and/or
+  string similarities between instance terms.  Heuristic linking is
+  risky because the optimal edit distance (both structure- and
+  string-based) has to be determined in an ad-hoc way and because of
+  ambiguity (where structurally and/or string-wise identical instance
+  terms denote different resources).  To mitigate the risk of
+  heuristic linking, human curation of the results is necessary.  This
+  requires a per-instance term amount of effort.
 
-%The same is true for other value types, e.g., `1903' may denote a year
-%in the Gregorian calendar or the length of a road in meters.  
+\item [Declarative] This form of linking relies on domain-specific
+  codes that are interpreted according to a known grammar.  By using
+  this grammar, equivalent instance terms can be identified across
+  datasets.  Equivalence is defined in terms of the result of parsing
+  strings with the aforementioned grammar.  While the grammar must be
+  make on a per-domain basis, linking is accurate and can be performed
+  automatically.
+
+\end{description}
+
+In this project we did not use heuristic linking because it required
+too much effort to filter out false positives given our source data
+(Section~\ref{sec:source_datasets}).  We applied the declarative
+linking approach on the domain-specific grammars that appear in the
+source data.  When we apply declarative grammars, we find out that
+some atomic terms in the source data are actually compound terms whose
+components and links are implicit.  This means that in order to add
+automatic links we first have to make more of the structure explicit
+through value unpacking (Section~\ref{sec:value_unpacking}).
+
+After value unpacking, we automatically link the source datasets at
+different levels of abstraction.  E.g., the ``monumenten'' and
+``gemeentegeschienenis'' datasets are linked to each other and to the
+``CBS'' dataset at the municipality level.
+
+
+
+\section{Persistent IRIs (Lesson 2C)}
+\label{sec:persistent_iris}
+
+For the source datasets (Section~\ref{sec:source_datasets}) that were
+already Linked Data we did not change the IRIs.  Since most source
+datasets were not Linked Data we had to mint new IRIs.  For this we
+follow the Dutch National URI Strategy~\cite{Overbeek2013}.
+
+An IRI consists of the following components
+
+\begin{description}
+
+\item [Scheme] Traditionally, the de facto scheme for almost all
+  Linked Data IRIs has been \textt{http}.  With the uptake in
+  \textt{https} adoption it may be wise to use HTTPS IRIs in the near
+  future.
+
+\item [Authority] This consists of four components, three of which
+  (`user', `password' and `port') are not allowed to occur in
+  resource-denoting IRIs.  The fourth component, `host', identifies
+  the server from which the denoted Linked Data resources are hosted.
+  Since our source datasets are published and maintained by different
+  organizations, we use the temporary host name
+  \textt{geonovum.triply.cc} from which we can host the converted
+  resources.  In the end, the Linked Data versions of the respective
+  source datasets should be published by their original owners, and
+  the host names of all IRIs will have to be updated accordingly.
+
+\item [Path] According to the Dutch National URI Strategy the
+  structure of this component depends on whether the IRI denotes a
+  schema term (i.e., a class or property, sometimes called `TBox') or
+  an instance term (sometimes called `ABox'):
+
+  \begin{description}
+
+  \item [Schema path] This is always \textt{/def}.
+
+  \item [Instance path] This is \textt{/id/<TYPE>/<NAME>}, where
+    \textt{<TYPE>} is the name of the primary type to which the
+    instance belongs, and \textt{<NAME>} is the instance name.
+
+  \end{description}
+
+\item [Query] Is not allowed to appear in a resource-denoting IRI.
+
+\item [Fragment] For schema IRIs (see the path component) this
+  consists of the name of the class or property.
+
+\end{description}
+
+An example of a schema IRI we minted is
+\url{http://geonovum.triply.cc/def#validUntil} or
+\textt{nsdef:validUntil} in abbreviated prefix notation.  An example
+of an instance IRI we minted is
+\url{http://geonovum.triply.cc/id/gemeente/0003} or
+\textt{nsid:gemeente/0003} in abbreviated prefix notation.
+
+The Dutch National URI Strategy gives clear guidance towards minting
+new IRIs.  In our experience, the most costly aspects of minting new
+IRIs are the \textt{<TYPE>} and \textt{<NAME>} parts of the path
+component of instance IRIs:
+
+\begin{description}
+  
+\item [\textt{<TYPE>}] This is ideally the \textt{rdfs:label} value of
+  the primary class of the instance.  If there are multiple classes,
+  then one has to be manually chosen.  If there are no classes, very
+  common for our source datasets most of which were not Linked Data,
+  these first have to be added to the data.
+
+\item [\textt{<NAME>}] If the source data contains a key relation,
+  then the values or this key relation can be used as names.  If there
+  is no such key relation in the data then names have to be generated
+  arbitrarily.  For this we use UUIDs.
+
+\end{description}
+
+
+
+\section{Make use of structure (Lesson 2D)}
+
+The use of structure is important to expose more aspects of meaning,
+as present in the source data, to external services.  E.g., the string
+\textt{BU00030002} denotes a specific neighborhood, but the fact that
+this neighborhood is contained in a municipality is opaque.  There are
+many ways in which implicit structure can be made explicit and new
+structure can be added.  Since of our source data is not Linked Data,
+we focused on repeatable/automated data enrichment steps that can be
+applied to source data that is newly transformed to RDF: value
+unpacking (Section~\ref{sec:value_unpacking}), value combining
+(Section~\ref{sec:value_combining}) and the removal of erroneous,
+empty or null values (Section~\ref{sec:null}).  There are many other
+data (re)structuring operations that we did not perform.  The
+transformations we did perform provide the necessary scaffolding for
+future data transformations.
 
 
 \subsection{Value unpacking}
@@ -736,15 +876,16 @@ wijk          := "WK" gemeente-code wijk-code(Wijk).
 wijk-code     := DIGIT DIGIT
 \end{minted}
 
-When loading the data we have to tell the machine to \emph{parse}
-values that appear in certain locations (either columns, tags or keys)
-by using the above grammar.  The machine is able to automatically
-construct the encoded entities and relations for all conforming
-values.  The high cost of value unpacking is caused by the fact that
-grammars are domain-dependent and by the fact that some grammars are
-more complex.
+When loading the data we have to automate the \emph{parsing} of values
+that appear in certain locations (either columns, tags or keys) by
+using the above grammar.  The data load script is then able to
+automatically construct the encoded entities and relations for all
+conforming values.  The cost of value unpacking is caused by the fact
+that grammars are domain-dependent and by the fact that some grammars
+can be rather complex.
 
 
+\begin{comment}
 \subsection{Value enrichment}
 \label{sec:value_enrichment}
 
@@ -756,10 +897,10 @@ For instance, very many values are encoded in human languages.  In
 order to do anything useful with these values we must at least know
 the language to which they belong.  For this we run automatic language
 detection algorithms on the values.  The accuracy for medium-length
-strings is known to be very high.~\cite{Beek2016c}
-
-The main benefit of running natural language detection on the current
-data collection is to distinguish between Dutch and English strings.
+strings is known to be very high.~\cite{Beek2016c} The main benefit of
+running natural language detection on the current data collection is
+to distinguish between Dutch and English strings.
+\end{comment}
 
 
 \subsection{Value combining}
@@ -807,7 +948,7 @@ example of value combining, because it loses the cutoff point between
 the given and the family name.
 
 
-\subsection{Remove erroneous, empty and null values}
+\subsection{Removal of erroneous, empty or null values}
 \label{sec:null}
 
 Null values are often domain-dependent.  For instance, in CBS data the
@@ -818,60 +959,6 @@ manually checked as well.  For the CBS dataset we found the value
 `-99999999.0' as an outlier, which is probably a typo of the
 domain-specific null value.
 
-
-\section{Persistent IRIs (Lesson 2C)}
-\label{sec:persistent_iris}
-
-It is very difficult to ensure persistent IRIs.  Most datasets have no
-IRIs at all, so we have to mint IRIs for each entity.  This is easy
-when the source data has a key.  If this is not the case then 
-
-While enriching
-the data (Section~\ref{sec:enrichment}) the number of entities
-increases.  These requires IRIs as well.
-
-We have found the Dutch Linked Data URI strategy to be very beneficial
-during this process.  It distinguishes between IRIs for instance
-(ABOX) and schema (TBOX) entities.
-
-\begin{comment}
-Publish data in registries at unique persistent URIs to ensure links
-between data sets are available, attainable and sustainable in the
-future.
-
-Using URIs, you can link to something in a unique way and therefore
-uniquely distinguished. You need to use stable HTTP URIs for spatial
-objects and datasets in order to keep the links future-proof and
-reliable.  Intended outcome
-
-Registries, and especially the base registries, have proper uri
-management. Records are made available on a unique persistent uri,
-which enables the linking of objects within these registries to each
-other.  Possible approach
-
-Publishing data records on unique persistent URIs requires a URI
-strategy. For example using the Dutch Linked Data URI Strategy:
-
-URI:
-
-    /id/{resource} 303 redirect to /doc/{resource}
-    /doc/{resource}
-
-Example: https://geo4web.apiwise.nl/gemeente/GM0307
-
-URI CBS Amersfoort
-How to test
-
-Several flavors exist but we recommend to the use Dutch URI Strategy
-as it was indexed by Google relatively fast. Read more here
-\end{comment}
-
-
-\section{Make use of structure (Lesson 2D)}
-
-TODO
-
-%\section{Deal with multiple developers \& devices (Lesson 3)}
 
 
 \section{Serve results in different flavors (Lesson 3A)}
@@ -945,7 +1032,7 @@ none of the requested Media Types is supported.
 \subsection{URL-based content-negotiation}
 \label{sec:url_based_content_negotiation}
 
-URL-based content-negotation allow clients to include their preferred
+URL-based content-negotiation allow clients to include their preferred
 Media Type in the query component of the request URL.  For example,
 the following is intended to return Media Type
 \textt{application/json}:
@@ -1000,7 +1087,7 @@ The required accuracy of geometry shapes is application dependent:
 some applications require maximum detail (e.g., centimeters) while
 others only need to draw a rough map (e.g., tens of meters).  For this
 reason we implemented an IRI query component called \textt{frac} that
-sets the maximum lenght of the fractional part of longitudes and
+sets the maximum length of the fractional part of longitudes and
 latitude values.
 
 A problem with this approach is that we do not know the precision of
@@ -1008,11 +1095,11 @@ longitude and latitude values.  Since many systems use floating-point
 numbers to represent longitude and latitude values, it is generally
 unclear which part of the fractional part is truthful and which part
 is a technical detail.  This problem can easily be solved by using
-ratial numbers to represent longitude and latitude values.  Ratial
+rational numbers to represent longitude and latitude values.  Rational
 numbers with decimal denominator allow the precision to be expressed
 by the numerator.  Unfortunately, since our source datasets all use
 floating point numbers and therefore remove precision information, we
-were unable to use ratial number notation to express precision.
+were unable to use rational number notation to express precision.
 
 A second approach to reducing the precision of geospatial shapes is to
 reduce the number of points that are used to represent shape outlines.
@@ -1027,33 +1114,18 @@ TopoJSON\seeUrl{https://github.com/mbostock/topojson}.
 
 \paragraph{Filtering}
 Geospatial support in SotA triple stores returns results in a bounding
-box.  When very many geospatial shapes are displayed in close
-proximity to each other it is sometimes more useful to cluster them
-into a single marker.  \todo{TODO}
+box.  This is similar to the way in which triples stores return SPARQL
+result sets in chunks.  For many real-world applications this way of
+returning results is impractical: there may be too many results within
+a given bounding box.  At the same time, results are often more/less
+valuable to the user based on an application-specific criteriom such
+as their proximity to the user.
 
+Our triple store does not suffer from these deficiencies.  It returns
+results in an anytime stream, i.e., on a one-by-one basis.  This means
+that the client application needs to perform far less filtering
+efforts because the server returns results in a sensible order.
 
-\begin{comment}
-\section{Metadata}
-\label{sec:metadata}
-
-It is important for users to be able to get an overview of the
-datasets that are disseminated in a Linked Data service.  While it is
-possible to insert a human-readable string description, this is not a
-sustainable solution.
-
-It is a challenge to base 
-
-\begin{itemize}
-\item \textt{void:classes}
-\item \textt{void:dataDump}
-\item \textt{void:distinctObjects}
-\item \textt{void:distinctSubjects}
-\item \textt{void:feature}
-\item \textt{void:properties}
-\item \textt{void:triples}
-\item \textt{void:vocabulary}
-\end{itemize}
-\end{comment}
 
 
 \section{Quantifying the effort}
@@ -1081,7 +1153,7 @@ integrating some existing library.
 
 As Table~\ref{tab:quantifying} shows, the costs of setting up a web
 service for Linked Geodata are still prohibitive.  In practice, some
-of the costs can be reduced in the following `shortcuts':
+of the costs can be reduced by taking the following `shortcuts':
 
 \paragraph{Points only}
 Many of the deficiencies of SotA triple stores can be worked around by
@@ -1098,7 +1170,7 @@ starting out with Linked Data a big chunk of the costs can be saved
 (approx. 40\% in our case).
 
 \begin{landscape}
-  \begin{longtable}{|p{1.25cm}|p{3.25cm}|p{3.25cm}|p{8cm}|p{1.25cm}|}
+  \begin{longtable}{|p{1.25cm}|p{3.25cm}|p{3.25cm}|p{9.5cm}|p{1.25cm}|}
     \hline
     
     \textbf{Lesson} & \textbf{Topic} & \textbf{Task} & \textbf{Cost} &
@@ -1108,19 +1180,19 @@ starting out with Linked Data a big chunk of the costs can be saved
     \hline
 
     1 & Serve different result set flavors & Serve JSON-LD to web
-    programmers & JSON-LD support costs hours to implement
-    when used for small result sets and when programming in one of the
-    supported languages.  It takes days in an unsupported language
-    (15~hours).  Do not use this approach at all for large data
+    programmers & JSON-LD support costs hours to implement when used
+    for small result sets and when programming in one of the supported
+    languages.  It takes more effort in an unsupported language:
+    12~hours.  Do not use this approach at all for large data
     collections. & \ref{sec:jsonld} \\
 
-    \hline
+    \cline{3-5}
 
     & & Serve GeoJSON to web programmers & Low cost due to a simple
-    format (1 hour).  This format cannot be read back as LOD. &
+    format: 2~hours.  This format cannot be read back as LOD. &
     \ref{sec:geojson} \\
 
-    \hline
+    \cline{3-5}
 
     & & GIS experts know\&like OGC standards & Currently no
     LOD-compatible solutions.  Wait until OGC and W3C come with an
@@ -1132,102 +1204,117 @@ starting out with Linked Data a big chunk of the costs can be saved
     the data contains hierarchical information; high cost otherwise. &
     \ref{sec:vocabulary_overview}\\
 
-    \hline
+    \cline{3-5}
     
     & & Domain/range visualization & Low cost when the data contains
-    domain/range information; high cost otherwise (not implemented). &
+    domain/range information; high cost otherwise. &
     \ref{sec:vocabulary_overview}\\
 
-    \hline
+    \cline{2-5}
     
     & Instance findability & Faceted browser & Low cost with property
-    and class information; high cost otherwise (not implemented). &
+    and class information; high cost otherwise. &
     \ref{sec:instance_findability}\\
     
-    \hline
+    \cline{3-5}
 
     & & Text-based search & Simple sub-string search based on a SPARQL
-    endpoint: 10 hours.  Complex text-based search with approximate
-    matching using ElasticSearch: 40 hours. &
+    endpoint: 10~hours.  Complex text-based search with approximate
+    matching using ElasticSearch: 40~hours. &
     \ref{sec:instance_findability}\\
 
     \hline
 
-    1B & Keep it simple & Heterogeneous \& nested geo-spatial
-    representations & Convert all shapes to non-nested WKT: 28 hours &
+    1B & Keep it simple & Uniform geo representation & Convert all
+    shapes to non-nested WKT: 28~hours &
     \ref{sec:uniform_representation}\\
 
     \hline
 
     1D & Different languages & Source data is not Linked Data &
-    Converting data from open text-based formats is cheap: 5-10 hours
+    Converting data from open text-based formats is cheap: 5-10~hours
     per format.  Closed binary formats are costly to convert and
     require specific tools or programming languages to convert. &
     \ref{sec:conversion}\\
 
     \hline
 
-    2B & Link everything & Value unpacking & For each encoding format
-    a dedicated unpacking grammar has to be written.  The CBS
-    `buurtcode' grammar took one hour to write. &
+    2B & Link everything & Heuristic linking & This form of linking is
+    expensive, because links have to be checked for false positives.
+    We did not perform heuristic linking in this project. &
     \ref{sec:value_unpacking}\\
 
     \hline
-
-    & & Value enrichment & &
-    \ref{sec:value_enrichment}\\
     
-    \hline
+    & & Declarative linking & We used our implementation for lesson 2D
+    (`value unpacking') to perform this form of linking: 8~hours &
+    \ref{sec:value_unpacking}\\
 
-    & & Value combining & &
-    \ref{sec:value_combining}\\
-    
-    \hline
+    \cline{3-5}
     
     & & Remove errors & Outlier detection is easy to perform with a
-    statistical framework like R.  The effort needed to fix erros is
+    statistical framework like R.  The effort needed to fix errors is
     linear in the number of outliers that are discovered.  We have
-    spend 4 hours on outlier detection and error removal. &
+    spend 4~hours on outlier detection and error removal. &
     \ref{sec:value_combining}\\
 
     \hline
 
-    2C & Persistent IRIs & \\
+    2C & Persistent IRIs & Following Dutch National URI Strategy &
+    Easy when the data contains (1) a key relation and (2) a primary
+    class with an \textt{rdfs:label} property.  When these are not
+    available they have to be added to the data which can be costly:
+    16~hours. & \ref{sec:persistent_iris}\\
     
     \hline
     
-    2D & Use structure \\
+    2D & Use structure & Value unpacking & Grammar construction on a
+    per-domain basis.  For CBS buurtcode grammar construction and
+    applying it to value unpacking: 10~hours. &
+    \ref{sec:value_unpacking}\\
+
+    \cline{3-5}
+
+    & & Value combining & Applied to all date/time values: 12~hours. &
+    \ref{sec:value_combining}\\
+
+    \cline{3-5}
+
+    & & Removal of erroneous, empty or null values & Effort needed
+    includes running outlier detection software, validating each
+    outlier by hand, and extending the data loading script with
+    removal operations for outliers that are considered erroneous:
+    14~hours. & \ref{sec:null}\\
 
     \hline
 
-    3A & Request different flavors & Use of \textt{Accept} header &
-    Not very well supported by most web servers, but easy to implement
-    by REST libraries or by hand: 12 hours. &
+    3A & Request different flavors & Use of HTTP \textt{Accept} header
+    & Not very well supported by most web servers, but easy to
+    implement by REST libraries or by hand: 10~hours. &
     \ref{sec:accept_header}\\
 
-    \hline
+    \cline{3-5}
 
-    & & URL-based content negotiation & Trivial: 1 hour &
+    & & URL-based content negotiation & Trivial: 1~hour &
     \ref{sec:url_based_content_negotiation}\\
     
     \hline
 
     3B & Reduce payload & HTTP compression & Supported by every HTTP
-    server: 1 hour & \ref{sec:http_compression}\\
+    server: 1~hour & \ref{sec:http_compression}\\
 
-    \hline
+    \cline{3-5}
 
     & & Reduce precision & Allowing the maximum length of the
-    fractional part to be set requires low cost (2 hours).
+    fractional part to be set requires low cost: 3~hours.
     Implementing reduction in the number of outline points is low cost
-    if a support library is available. & \ref{sec:reduce_precision}\\
+    if a support library is available.  Not implemented in this
+    project. & \ref{sec:reduce_precision}\\
 
     \hline
-
-    & & Filtering & TODO & \ref{sec:clustering}\\
-    
-    \hline
-    \label{tab:quantifying}
+    \caption{Table enumerating the tasks involved in implementing the
+      GeoNovum lessons learned, quantifying the effort where
+      possible.\label{tab:quantifying}}
   \end{longtable}
 \end{landscape}
 
@@ -1248,7 +1335,7 @@ development and investment.
 Even though the problems in terms of data storage, conversion and
 transformation are severe, we do believe that the GeoNovum lessons
 learned give the direction that is needed in order to improve existing
-tools in order to make it easier to publish Linked Geodata in the
+tools so that it will become easier to publish Linked Geodata in the
 future.
 
 
@@ -1256,6 +1343,7 @@ future.
 \bibliography{main}
 
 
+\begin{comment}
 \appendix
 
 \section{Used aliases}
@@ -1274,13 +1362,20 @@ document.
     \hline
     \textt{bif}    & \url{http://www.openlinksw.com/schemas/bif#}\\
     \hline
+    \textt{ns}     & \url{http://geonovum.triply.cc/id/}\\
+    \hline
+    \textt{nsdef}  & \url{http://geonovum.triply.cc/def#}\\
+    \hline
     \textt{rdf}    & \url{http://www.w3.org/1999/02/22-rdf-syntax-ns#}\\
     \hline
     \textt{rdfs}   & \url{http://www.w3.org/2000/01/rdf-schema#}\\
+    \hline
+    \textt{xsd}    & \url{http://www.w3.org/2001/XMLSchema#}\\
     \hline
   \end{tabular}
   \caption{Aliases for commonly occurring IRI prefixes.}
   \label{tab:alias}
 \end{table}
+\end{comment}
   
 \end{document}
